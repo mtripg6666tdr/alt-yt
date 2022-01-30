@@ -19,7 +19,7 @@ export async function handleSearch(req:Request, res:Response){
     if(query){
       const hash = sha256(query).toString();
       SID_CACHE[hash] = {
-        search: ytsr.default(query, {gl: "JP", hl: "ja", limit: 30, safeSearch: true}).catch(e => e.toString()),
+        search: ytsr.default(query, {gl: "JP", hl: "ja", limit: 30}).catch(e => e.toString()),
         query
       };
       res.writeHead(301, {
