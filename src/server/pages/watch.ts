@@ -103,6 +103,7 @@ function generateHtml(template:string, info:ytdl.videoInfo, items:ytdl.relatedVi
     ;
   }
   const subscriber = (function(count){
+    if(!count) return "";
     const str = count.toString();
     if(str.length <= 4){
       return str;
@@ -115,7 +116,7 @@ function generateHtml(template:string, info:ytdl.videoInfo, items:ytdl.relatedVi
   const result = template
     .replace(/{title}/, info.videoDetails.title)
     .replace(/{channel_url}/, info.videoDetails.author.channel_url)
-    .replace(/{channel_thumb}/, info.videoDetails.author.thumbnails[0].url)
+    .replace(/{channel_thumb}/, "proxy?url=" + encodeURIComponent(info.videoDetails.author.thumbnails[0].url))
     .replace(/{channel}/, info.videoDetails.author.name)
     .replace(/{channel_subscribe}/, info.videoDetails.author.channel_url + "?sub_confirmation=1")
     .replace(/{channel_subscriber}/, subscriber)
