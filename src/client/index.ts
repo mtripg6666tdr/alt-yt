@@ -5,6 +5,7 @@
       const detailedModal = document.getElementsByClassName("detailed_modal")[0];
       const detailedModalBg = document.getElementsByClassName("detailed_modal_bg")[0];
       const initPlayer = (src:string, format:string, length:number = 0) => {
+        if(!videojs) return;
         // @ts-ignore
         const videoPlayer = videojs("video_player") as videojs.VideoJsPlayer;
         const loopButton = videoPlayer.controlBar.addChild("button");
