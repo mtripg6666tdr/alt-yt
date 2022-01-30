@@ -1,0 +1,25 @@
+<!DOCTYPE HTML>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width; initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <script defer="defer" src="common.js"></script>
+    <title>Alt-YT</title>
+  </head>
+  <body>
+    <div class="centering_content">
+      <h1><a href="/" class="no_link">Alt-YT</a></h1>
+      <p>YouTube動画の自由な検索と視聴。</p>
+      <form action="/search" method="GET">
+        <input type="text" name="q" size="50" value="{query}" placeholder="検索キーワードを入力">
+        <button type="submit">検索</button>
+        <input type="checkbox" id="hr" name="hr" {hr}><label for="hr">高画質</label>
+      </form>
+      <div class="search_result">
+        <p class="query_show">「{current_query}」の検索結果:</p>
+        {search_result}
+      </div>
+    </div>
+  </body>
+</html>

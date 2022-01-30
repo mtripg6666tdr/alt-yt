@@ -1,0 +1,225 @@
+body {
+  background-color: #333333;
+  color: white;
+}
+div.centering_content {
+  margin: 0px auto;
+  text-align: center;
+}
+input, button {
+  font-size: 120%;
+  vertical-align: middle;
+  margin-right: -3px;
+  margin-left: -3px;
+}
+input[type="checkbox"] {
+  margin: 3px;
+}
+input {
+  padding-top: 2px;
+  padding-bottom: 2px;
+}
+button {
+  appearance: none;
+  box-sizing: border-box;
+  border: 0.5px solid grey;
+}
+div.search_result {
+  width: 50vw;
+  margin: 0px auto;
+  margin-top: 20px;
+}
+div.search_result div.search_card {
+  width: 50vw;
+  height: 16vh;
+  margin-bottom: 0px;
+  margin-top: 0px;
+  border: 1px solid white;
+}
+div.search_result div.search_card a {
+  display: flex;
+  text-decoration: none;
+  color: white;
+  height: 16vh;
+}
+div.search_result div.search_card div.search_thumb {
+  aspect-ratio: 16/9;
+}
+div.search_result div.search_card div.search_thumb img {
+  height: 15vh;
+  margin-top: 0.5vh;
+  margin-left: 0.5vh;
+  margin-bottom: 0.5vh;
+  width: 26.7vh;
+  aspect-ratio: 16/9;
+}
+div.search_result div.search_card div.search_detail {
+  width: 100%;
+  text-align: left;
+  overflow: hidden;
+}
+div.search_result div.search_card div.search_detail div.search_title p {
+  font-size: 110%;
+  margin-top: 5px;
+  margin-bottom: 5px;
+}
+div.search_result div.search_card div.search_detail div.search_channel p {
+  margin: 0px;
+}
+div.search_result div.search_card div.search_detail div.search_channel p img {
+  width: 4vh;
+  height: 4vh;
+  aspect-ratio: 1/1;
+  border-radius: 100%;
+  display: inline-block;
+  vertical-align: middle;
+}
+div.search_result div.search_card div.search_detail div.search_description p {
+  font-size: 90%;
+  margin-top: 5px;
+  margin-bottom: 0px;
+}
+a.no_link {
+  color: white;
+  text-decoration: none;
+}
+p.no_margin {
+  margin-top: 0px;
+  margin-bottom: 0px;
+}
+div.player_container .player {
+  max-width: 900px;
+  width: 90vw;
+  aspect-ratio: 16/9;
+  margin: 0px auto;
+}
+div.player_container p.video_title {
+  text-align: left;
+  max-width: 900px;
+  width: 90vw;
+  margin: 0px auto;
+  margin-top: 1em;
+}
+div.player_container div.channel_info {
+  max-width: 900px;
+  width: 90vw;
+  margin: 0px auto;
+  margin-top: 20px;
+  position: relative;
+}
+div.player_container div.channel_info div {
+  position: relative;
+  height: 5em;
+}
+div.player_container div.channel_info div div.left_container {
+  float: left;
+}
+div.player_container div.channel_info div div.left_container a {
+  text-decoration: none;
+  color: white;
+}
+div.player_container div.channel_info div div.left_container a img {
+  border-radius: 100%;
+  vertical-align: middle;
+  width: 6vh;
+}
+div.player_container div.channel_info div div.left_container span {
+  vertical-align: middle;
+}
+div.player_container div.channel_info div div.right_container {
+  float: right;
+}
+div.player_container div.channel_info div div.right_container a {
+  text-decoration: none;
+}
+div.player_container div.channel_info div div.right_container a button {
+  appearance: none;
+  background-color: #004eaf;
+  color: white;
+  border-radius: 10px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  padding-right: 8px;
+  padding-left: 8px;
+  cursor: pointer;
+}
+div.player_container div.detailed_button {
+  position: fixed;
+  bottom: 0px;
+  left: 10vw;
+  width: 80vw;
+  background-color: #cc006b;
+  color: white;
+  border-radius: 10px 10px 0px 0px;
+  cursor: pointer;
+  z-index: 1;
+  transition: bottom 0.3s;
+}
+div.player_container div.detailed_button.opened {
+  bottom: 93vh;
+  transition: bottom 0.3s;
+}
+div.player_container div.detailed_modal {
+  position: fixed;
+  left: 10vw;
+  width: 80vw;
+  height: 90vh;
+  top: 100vh;
+  background-color: #333333;
+  z-index: 1;
+  transition: top 0.3s;
+  overflow-y: scroll;
+}
+div.player_container div.detailed_modal.opened {
+  top: 7vh;
+  transition: top 0.3s;
+}
+div.player_container div.detailed_modal_bg {
+  position: fixed;
+  top: 0px;
+  left: 0px;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  background-color: #ffffff77;
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+}
+div.player_container div.detailed_modal_bg.opened {
+  opacity: 1;
+  transition: opacity 0.3s;
+  pointer-events: all;
+}
+div.player_container div.detailed_modal div.related div.search_result {
+  width: 96%;
+}
+div.player_container div.detailed_modal div.related div.search_card {
+  width: 100%;
+  box-sizing: border-box;
+}
+.s110p {
+  font-size: 90%;
+}
+h1.small_title_h1 {
+  margin-top: 0.3em;
+  margin-bottom: 0.5em;
+}
+.video-js {
+  width: 100%;
+  height: 100%;
+}
+.video-js:hover button.vjs-big-play-button, .video-js button.vjs-big-play-button {
+  height:90px;
+  width:90px;
+  border-radius:50%;
+  font-size:5em;
+  line-height:90px;
+  background:#3a3a3a88;
+  top:50%;
+  left:50%;
+  transform: translate(-50%, -50%);
+}
+.loop_enable {
+  text-shadow: 0em 0em 0.3em white, 0em 0em 0.3em white;
+}

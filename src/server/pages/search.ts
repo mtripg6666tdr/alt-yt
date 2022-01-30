@@ -1,0 +1,93 @@
+import type { Request, Response } from "express";
+import * as path from "path";
+import * as fs from "fs";
+import * as ytsr from "ytsr";
+import sha256 from 'crypto-js/sha256';
+import { respondError } from "../util";
+
+const SID_CACHE = {} as {[sid:string]:{
+  search:Promise<ytsr.Result>,
+  query:string,
+}};
+const template = fs.readFileSync(path.join(__dirname, "../../common/search.html"), {encoding:"utf-8"});
+
+export async function handleSearch(req:Request, res:Response){
+  try{
+    const query = req.query["q"]?.toString();
+    const sid = req.query["sid"]?.toString();
+    const hr = req.query["hr"]?.toString() === "on";
+    if(query){
+      const hash = sha256(query).toString();
+      SID_CACHE[hash] = {
+        search: ytsr.default(query, {gl: "JP", hl: "ja", limit: 30, safeSearch: true}).catch(e => e.toString()),
+        query
+      };
+      res.writeHead(301, {
+        "Location": "/search?sid=" + hash + (hr ? "&hr=on" : ""),
+        "Cache-Control": "no-store",
+      });
+      res.end();
+    }else if(sid && SID_CACHE[sid]){
+      const { search, query } = SID_CACHE[sid];
+      const result = await search;
+      if(typeof result === "string"){
+        respondError(res, result, 500);
+        return;
+      }
+      const items = result.items.filter(i => i.type === "video");
+      const html = generateHtml(template, query, query, items, hr);
+      res.writeHead(200, {"Cotent-Type": "text/html; charset=UTF-8"});
+      res.end(html);
+    }else{
+      throw "不正なアクセスです";
+    }
+  }
+  catch(e){
+    respondError(res, e.toString());
+  }
+}
+
+function generateHtml(template:string, currentQuery:string, query:string, items:ytsr.Item[], hr:boolean){
+  const cardHtml = `
+  <div class="search_card">
+    <a href="{url}">
+      <div class="search_thumb">
+        <img src="{thumb}">
+      </div>
+      <div class="search_detail">
+        <div class="search_title">
+          <p>{title}</p>
+        </div>
+        <div class="search_channel">
+          <p>
+            <img src="{channel_thumb}">
+            <span>{channel}</span>
+          </p>
+        </div>
+        <div class="search_description">
+          <p>{description}</p>
+        </div>
+      </div>
+    </a>
+  </div>`;
+  let cards = "";
+  for(let i = 0; i < items.length; i++){
+    const item = items[i] as ytsr.Video;
+    const description = "長さ:" + item.duration + ", " + item.views + "回視聴, " + item.uploadedAt + "<br>" + (item.description?.replace(/\r\n/g, "\r").replace(/\r/g, "\n").replace(/\n/g, " ") || "");
+    cards += cardHtml
+      .replace(/{url}/, "/watch?v=" + item.id + (hr ? "&hr=on" : ""))
+      .replace(/{thumb}/, "proxy?url=" + encodeURIComponent(item.thumbnails[0].url))
+      .replace(/{title}/, item.title)
+      .replace(/{channel_thumb}/, "proxy?url=" + encodeURIComponent(item.author.avatars[0].url))
+      .replace(/{channel}/, item.author.name)
+      .replace(/{description}/, description.length > 200 ? description.substring(0, 200) : description)
+    ;
+  }
+  const result = template
+    .replace(/{query}/, query)
+    .replace(/{current_query}/, currentQuery)
+    .replace(/{hr}/, hr ? "checked": "")
+    .replace(/{search_result}/, cards)
+  ;
+  return result;
+}

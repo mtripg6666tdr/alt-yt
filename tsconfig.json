@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "allowJs": false,
+    "module": "CommonJS",
+    "target": "ES2019",
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "noImplicitAny": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noImplicitThis": true,
+    "outDir": "./dist"
+  },
+  "include": [
+    "./src/server/**/*.ts"
+  ]
+}

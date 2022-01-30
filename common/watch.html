@@ -1,0 +1,59 @@
+<!DOCTYPE HTML>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <link href="https://cdn.jsdelivr.net/npm/video.js@v7.17.0/dist/video-js.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/video.js@v7.17.0/dist/video.min.js"></script>
+    <script defer="defer" src="common.js"></script>
+    <title>Alt-YT</title>
+  </head>
+  <body>
+    <div class="centering_content">
+      <h1 class="small_title_h1"><a href="/" class="no_link s110p">Alt-YT</a></h1>
+      <div class="player_container">
+        <div class="player">
+          <video class="video_player video-js" id="video_player" data-setup='{"controls":true,"autoplay":true}' controlsList="nodownload" oncontextmenu="return false;">
+          </video>
+        </div>
+        <p class="video_title">{title}</p>
+        <div class="channel_info">
+          <div>
+            <div class="left_container">
+              <a href="{channel_url}" target="_blank" referrerpolicy="no-referrer">
+                <img src="{channel_thumb}">
+                <span>{channel}</span>
+              </a>
+            </div>
+            <div class="right_container">
+              <a href="{channel_subscribe}" target="_blank" referrerpolicy="no-referrer">
+                <button type="button">チャンネル登録 {channel_subscriber}</button>
+              </a>
+            </div>
+          </div>
+        </div>
+        <div class="detailed_button">
+          <span>▲詳細情報</span>
+        </div>
+        <div class="detailed_modal">
+          <div class="summary fit">
+            <h2>概要</h2>
+            <p class="d_content">{summary}</p>
+          </div>
+          <div class="meta fit">
+            <h2>その他の情報</h2>
+            <p class="d_meta">{meta_info}</p>
+          </div>
+          <div class="related fit">
+            <h2>関連動画</h2>
+            <div class="search_result">
+              {related_content}
+            </div>
+          </div>
+        </div>
+        <div class="detailed_modal_bg"></div>
+      </div>
+    </div>
+  </body>
+</html>
