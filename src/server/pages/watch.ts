@@ -1,9 +1,11 @@
 import * as fs from "fs";
 import * as path from "path";
+import { Transform } from "stream";
 import { http, https } from "follow-redirects";
 import { Request, Response } from "express";
 import { SHA256 } from "crypto-js";
 import { FFmpeg } from "prism-media";
+import LineTransformStream from "line-transform-stream";
 import * as ytdl from "ytdl-core";
 import { CalcHourMinSec, generateRandomNumber, parseCookie, respondError, ytUserAgent } from "../util";
 import { SessionManager } from "../session";
@@ -162,6 +164,14 @@ export async function handleFetch(req:Request, res:Response){
           length: Number(info.videoDetails.lengthSeconds),
           ott: SessionManager.instance.createToken(key)
         }));
+      }else if(info.videoDetails.liveBroadcastDetails && info.videoDetails.liveBroadcastDetails.isLiveNow){
+        SID_CACHE[sid].format = ytdl.chooseFormat(info.formats, {isHLS:true} as ytdl.chooseFormatOptions);
+        res.writeHead(200, {"Content-Type": "application/json; charset=UTF-8"});
+        res.end(JSON.stringify({
+          key: SID_CACHE[sid].key,
+          format: `application/x-mpegURL`,
+          ott: SessionManager.instance.createToken(key)
+        }));
       }else{
         const format = SID_CACHE[sid].format = ytdl.chooseFormat(info.formats, {
           filter: "audioandvideo", quality: "highest"
@@ -194,18 +204,17 @@ export async function handlePlayback(req:Request, res:Response){
     const session = skey && SessionManager.instance.update(skey);
     if(!sval || !session || session.value !== sval || !SessionManager.instance.validateToken(skey, ott)){
       respondError(res, "セッションが切れているか、URLが無効です。", 401);
+      return;
     }
     if(sid && SID_CACHE[sid] && key && SID_CACHE[sid].key === key){
       const { info:pinfo, format, vformat } = SID_CACHE[sid];
-      if(!req.headers.referer || !req.headers.referer.includes("sid=" + sid)){
+      if(!req.headers.referer || !req.headers.referer.includes("sid=" + sid) || !req.headers.referer.includes("/watch")){
         respondError(res, "不正なアクセスです", 403);
         return;
       }
       const info = await pinfo;
-      if(info.videoDetails.liveBroadcastDetails && info.videoDetails.liveBroadcastDetails.isLiveNow){
-        respondError(res, "Live stream is currently not supported", 415);
-        return;
-      }else if(!hr){
+      if(!hr){
+        const isLive = info.videoDetails.liveBroadcastDetails && info.videoDetails.liveBroadcastDetails.isLiveNow;
         const url = new URL(format.url);
         let headers = {} as {[key:string]:string};
         if(req.headers.range) headers["Range"] = req.headers.range;
@@ -221,14 +230,34 @@ export async function handlePlayback(req:Request, res:Response){
             ...headers
           }
         }, remoteRes => {
-          res.writeHead(remoteRes.statusCode, remoteRes.headers);
-          res.flushHeaders();
-          remoteRes
-            .on("error", () => res.end())
-            .on("close", () => res.end())
-            .pipe(res)
-            .on("close", () => remoteRes.destroy())
+          if(isLive){
+            const headers = Object.assign({}, remoteRes.headers);
+            if(headers["content-length"]) delete headers["content-length"];
+            res.writeHead(remoteRes.statusCode, headers);
+            res.flushHeaders();  
+            const filter = new LineTransformStream((text) => {
+              if(text.startsWith("https"))
+                return `/proxy/${Buffer.from(text).toString("base64")}/sval/${sval}`;
+              else
+                return text;
+            });
+            remoteRes
+              .on("error", () => res.end())
+              .on("close", () => res.end())
+              .pipe(filter)
+              .pipe(res)
+              .on("close", () => remoteRes.destroy())
+            ;
+        }else{
+            res.writeHead(remoteRes.statusCode, remoteRes.headers);
+            res.flushHeaders();
+            remoteRes
+              .on("error", () => res.end())
+              .on("close", () => res.end())
+              .pipe(res)
+              .on("close", () => remoteRes.destroy())
           ;
+          }
         })
         .on("error", (e) => {
           console.log(e);

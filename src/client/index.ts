@@ -91,7 +91,7 @@
             clearInterval(interval);
           }
         }).catch(()=>null);
-      }, 5 * 60 * 1000);
+      }, 10 * 60 * 1000);
     }
   });
 })();
