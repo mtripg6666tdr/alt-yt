@@ -130,7 +130,7 @@ function generateHtml(template:string, info:ytdl.videoInfo, items:ytdl.relatedVi
     .replace(/{channel}/, info.videoDetails.author.name)
     .replace(/{channel_subscribe}/, info.videoDetails.author.channel_url + "?sub_confirmation=1")
     .replace(/{channel_subscriber}/, subscriber)
-    .replace(/{summary}/, info.videoDetails.description.replace(/\r\n/g, "\r").replace(/\r/g, "\n").replace(/\n/g, "<br>"))
+    .replace(/{summary}/, (info.videoDetails.description || "").replace(/\r\n/g, "\r").replace(/\r/g, "\n").replace(/\n/g, "<br>"))
     .replace(/{meta_info}/, (info.videoDetails.viewCount || "不明") + "回視聴, " + (info.videoDetails.uploadDate || "アップロード時不明") + `<br>URL: <a href="${info.videoDetails.video_url}" class="no_link" target="_blank">${info.videoDetails.video_url}</a>`)
     .replace(/{related_content}/, cards)
   ;
