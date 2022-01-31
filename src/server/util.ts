@@ -5,9 +5,9 @@ import { Response } from "express";
 export const errorTemplate = fs.readFileSync(path.join(__dirname, "../common/error.html"), {encoding:"utf-8"});
 export const userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.99 Safari/537.36";
 export const ytUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.101 Safari/537.36";
-export function respondError(res:Response, message:string, status:number = 400){
+export function respondError(res:Response, message:string, status:number = 500){
   res.writeHead(status, {"Content-Type": "text/html; charset=UTF-8"});
-  res.end(errorTemplate.replace(/{message}/, message));
+  res.end(errorTemplate.replace(/{message}/, status + "<br>" + message));
 }
 export function CalcHourMinSec(seconds:number){
   const sec = seconds % 60;
@@ -24,4 +24,11 @@ export function AddZero(str:string, length:number){
 }
 export function generateRandomNumber(){
   return Math.floor(new Date().getTime() * Math.random());
+}
+export function parseCookie(cookie:string){
+  const cookies = {} as {[key:string]:string};
+  cookie.split(";").map(kv => kv.split("=").map(k => k.trim())).forEach(keyval => {
+    cookies[keyval[0]] = keyval[1];
+  })
+  return cookies;
 }

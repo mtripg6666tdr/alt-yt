@@ -30,6 +30,7 @@ module.exports = {
               shuffleStringArray: true,
               simplify: true,
               splitStrings: true,
+              splitStringsChunkLength: 4,
               stringArray: true,
               stringArrayIndexesType: [
                   'hexadecimal-number'

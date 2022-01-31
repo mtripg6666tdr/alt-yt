@@ -5,7 +5,8 @@ import { Request, Response } from "express";
 import { SHA256 } from "crypto-js";
 import { FFmpeg } from "prism-media";
 import * as ytdl from "ytdl-core";
-import { CalcHourMinSec, generateRandomNumber, respondError, ytUserAgent } from "../util";
+import { CalcHourMinSec, generateRandomNumber, parseCookie, respondError, ytUserAgent } from "../util";
+import { SessionManager } from "../session";
 
 const SID_CACHE = {} as {[sid:string]:{
   vid:string;
@@ -21,6 +22,15 @@ export async function handleWatch(req:Request, res:Response){
     const vid = req.query["v"]?.toString();
     const sid = req.query["sid"]?.toString();
     const hr = req.query["hr"]?.toString() === "on";
+    const cookie = req.headers.cookie && parseCookie(req.headers.cookie);
+    const key = cookie && cookie.A_SID;
+    const sval = req.query["sval"]?.toString();
+    const session = key && SessionManager.instance.update(key);
+    if(!sval || !session || session.value !== sval){
+      respondError(res, "セッションが切れているか、URLが無効です。", 401);
+      return;
+    }
+    SessionManager.instance.revokeToken(key);
     if(vid){
       const hash = SHA256(vid).toString();
       SID_CACHE[hash] = {
@@ -32,7 +42,7 @@ export async function handleWatch(req:Request, res:Response){
         vformat: null,
       };
       res.writeHead(301, {
-        "Location": "/watch?sid=" + hash + (hr ? "&hr=on" : ""),
+        "Location": "/watch?sid=" + hash + "&sval=" + sval + (hr ? "&hr=on" : ""),
         "Cache-Control": "no-store",
       });
       res.end();
@@ -43,19 +53,19 @@ export async function handleWatch(req:Request, res:Response){
         respondError(res, result, 500);
         return;
       }
-      const html = generateHtml(tempalte, result, result.related_videos);
+      const html = generateHtml(tempalte, result, result.related_videos, hr, sval);
       res.writeHead(200, {"Content-Type": "text/html; charset=UTF-8"});
       res.end(html);
     }else{
-      throw "不正なアクセスです";
+      respondError(res, "不正なアクセスです", 403);
     }
   }
   catch(e){
-    respondError(res, e.toString(), 500);
+    respondError(res, e.toString());
   }
 }
 
-function generateHtml(template:string, info:ytdl.videoInfo, items:ytdl.relatedVideo[]){
+function generateHtml(template:string, info:ytdl.videoInfo, items:ytdl.relatedVideo[], hr:boolean, sval:string){
   const cardHtml = `
   <div class="search_card">
     <a href="{url}">
@@ -94,10 +104,10 @@ function generateHtml(template:string, info:ytdl.videoInfo, items:ytdl.relatedVi
     })(item.length_seconds);
     const description = "長さ:" + duration + ", " + (item.view_count || "不明") + "回視聴, アップロード:" + (item.published || "不明");
     cards += cardHtml
-      .replace(/{url}/, "/watch?v=" + item.id)
-      .replace(/{thumb}/, "proxy?url=" + encodeURIComponent(item.thumbnails[0].url))
+      .replace(/{url}/, "/watch?v=" + item.id + "&sval=" + sval + (hr ? "&hr=on" : ""))
+      .replace(/{thumb}/, "proxy?url=" + encodeURIComponent(item.thumbnails[0].url) + "&sval=" + sval)
       .replace(/{title}/, item.title)
-      .replace(/{channel_thumb}/, "proxy?url=" + encodeURIComponent(item.thumbnails[0].url))
+      .replace(/{channel_thumb}/, "proxy?url=" + encodeURIComponent(item.thumbnails[0].url) + "&sval=" + sval)
       .replace(/{channel}/, typeof item.author === "string" ? item.author : item.author.name)
       .replace(/{description}/, description.length > 200 ? description.substring(0, 200) : description)
     ;
@@ -116,7 +126,7 @@ function generateHtml(template:string, info:ytdl.videoInfo, items:ytdl.relatedVi
   const result = template
     .replace(/{title}/, info.videoDetails.title)
     .replace(/{channel_url}/, info.videoDetails.author.channel_url)
-    .replace(/{channel_thumb}/, "proxy?url=" + encodeURIComponent(info.videoDetails.author.thumbnails[0].url))
+    .replace(/{channel_thumb}/, "proxy?url=" + encodeURIComponent(info.videoDetails.author.thumbnails[0].url) + "&sval=" + sval)
     .replace(/{channel}/, info.videoDetails.author.name)
     .replace(/{channel_subscribe}/, info.videoDetails.author.channel_url + "?sub_confirmation=1")
     .replace(/{channel_subscriber}/, subscriber)
@@ -131,6 +141,14 @@ export async function handleFetch(req:Request, res:Response){
   try{
     const sid = req.query["sid"]?.toString();
     const hr = req.query["hr"]?.toString() === "on";
+    const cookie = req.headers.cookie && parseCookie(req.headers.cookie);
+    const key = cookie && cookie.A_SID;
+    const sval = req.query["sval"]?.toString();
+    const session = key && SessionManager.instance.update(key);
+    if(!sval || !session || session.value !== sval){
+      respondError(res, "セッションが切れているか、URLが無効です。", 401);
+      return;
+    }
     if(sid && SID_CACHE[sid]){
       const info = await SID_CACHE[sid].info;
       if(hr){
@@ -141,7 +159,8 @@ export async function handleFetch(req:Request, res:Response){
         res.end(JSON.stringify({
           key: SID_CACHE[sid].key,
           format: `video/${vformat.container}`,
-          length: Number(info.videoDetails.lengthSeconds)
+          length: Number(info.videoDetails.lengthSeconds),
+          ott: SessionManager.instance.createToken(key)
         }));
       }else{
         const format = SID_CACHE[sid].format = ytdl.chooseFormat(info.formats, {
@@ -150,11 +169,12 @@ export async function handleFetch(req:Request, res:Response){
         res.writeHead(200, {"Content-Type": "application/json; charset=UTF-8"});
         res.end(JSON.stringify({
           key: SID_CACHE[sid].key,
-          format: `video/${format.container}`
+          format: `video/${format.container}`,
+          ott: SessionManager.instance.createToken(key)
         }));
       }
     }else{
-      respondError(res, "不正なアクセスです");
+      respondError(res, "不正なアクセスです", 403);
     }
   }
   catch(e){
@@ -167,25 +187,38 @@ export async function handlePlayback(req:Request, res:Response){
     const sid = req.query["sid"]?.toString();
     const key = req.query["key"]?.toString();
     const hr = req.query["hr"]?.toString() === "on";
+    const ott = req.query["ott"]?.toString();
+    const cookie = req.headers.cookie && parseCookie(req.headers.cookie);
+    const skey = cookie && cookie.A_SID;
+    const sval = req.query["sval"]?.toString();
+    const session = skey && SessionManager.instance.update(skey);
+    if(!sval || !session || session.value !== sval || !SessionManager.instance.validateToken(skey, ott)){
+      respondError(res, "セッションが切れているか、URLが無効です。", 401);
+    }
     if(sid && SID_CACHE[sid] && key && SID_CACHE[sid].key === key){
       const { info:pinfo, format, vformat } = SID_CACHE[sid];
       if(!req.headers.referer || !req.headers.referer.includes("sid=" + sid)){
-        respondError(res, "不正なアクセスです");
+        respondError(res, "不正なアクセスです", 403);
         return;
       }
       const info = await pinfo;
       if(info.videoDetails.liveBroadcastDetails && info.videoDetails.liveBroadcastDetails.isLiveNow){
-        respondError(res, "Live stream is currently not supported");
+        respondError(res, "Live stream is currently not supported", 415);
         return;
       }else if(!hr){
         const url = new URL(format.url);
+        let headers = {} as {[key:string]:string};
+        if(req.headers.range) headers["Range"] = req.headers.range;
+        if(req.headers.accept) headers["Accept"] = req.headers.accept;
+        if(req.connection) headers["Connection"] = req.headers.connection;
         ({"http:": http, "https:": https})[url.protocol].request({
           protocol: url.protocol,
           host: url.host,
           path: url.pathname + url.search + url.hash,
           method: "GET",
           headers: {
-            "User-Agent": ytUserAgent
+            "User-Agent": ytUserAgent,
+            ...headers
           }
         }, remoteRes => {
           res.writeHead(remoteRes.statusCode, remoteRes.headers);
@@ -198,9 +231,9 @@ export async function handlePlayback(req:Request, res:Response){
           ;
         })
         .on("error", (e) => {
-          respondError(res, e.toString());
-        })
-        .end();
+          console.log(e);
+          res.end();
+        }).end();
       }else{
         const aformat = ytdl.chooseFormat(info.formats, {
           filter: "audio", quality: "highestaudio"

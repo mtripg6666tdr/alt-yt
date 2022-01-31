@@ -1,10 +1,12 @@
 import * as fs from "fs";
 import * as path from "path";
 import express from "express";
-import { respondError } from "./util";
+import { parseCookie, respondError } from "./util";
 import { handleProxy } from "./pages/proxy";
 import { handleSearch } from "./pages/search";
 import { handleFetch, handlePlayback, handleWatch } from "./pages/watch";
+import { SessionManager } from "./session";
+import { handleAlive } from "./pages/alive";
 
 export function createServer(){
   const app = express();
@@ -34,15 +36,26 @@ export function createServer(){
     .get("/watch", (req, res) => handleWatch(req, res))
     .get("/video_fetch", (req, res) => handleFetch(req, res))
     .get("/video", (req, res) => handlePlayback(req, res))
+    .get("/alive", (req, res) => handleAlive(req, res))
     .use("/", (req, res) => {
-      if(req.url === "/" || req.url === "/index.html"){
+      if((req.url === "/" || req.url === "/index.html") && !req.headers["user-agent"].toLowerCase().includes("bot")){
         try{
           const html = fs.readFileSync(path.join(__dirname, "../common/index.html"), {encoding:"utf-8"});
-          res.writeHead(200, {"Content-Type": "text/html; charset=UTF-8"});
-          res.end(html);
+          const cookie = req.headers.cookie && parseCookie(req.headers.cookie);
+          let ur = false;
+          if(cookie && cookie.A_SID){
+            ur = SessionManager.instance.unregister(cookie.A_SID);
+          }
+          const key = SessionManager.instance.register();
+          res.writeHead(200, {
+            "Content-Type": "text/html; charset=UTF-8",
+            "Set-Cookie": `A_SID=${key}; HttpOnly`,
+            "X-Revoked-Auth": +ur
+          });
+          res.end(html.replace(/{sval}/, SessionManager.instance.get(key).value));
         }
         catch(e){
-          respondError(res, e.toString(), 500);
+          respondError(res, e.toString());
         }
       }else{
         res.writeHead(404, {"Location": "/"});

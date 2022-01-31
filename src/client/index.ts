@@ -1,5 +1,25 @@
 (function(){
   window.addEventListener("load", () => {
+    // 二重送信防止
+    const inputs = [...document.getElementsByTagName("button")];
+    let submited = false;
+    [...document.getElementsByTagName("form")].forEach(form => {
+      form.addEventListener("submit", () => inputs.forEach(input => input.disabled = true));
+      if(!submited){
+        submited = true;
+        return true;
+      }else{
+        return false;
+      }
+    });
+    // パラメーター解析
+    const searchParams = {} as {[key:string]:string};
+    location.search
+      .substring(1)
+      .split("&")
+      .map(p => p.split("=").map(t => decodeURIComponent(t)))
+      .forEach(q => searchParams[q[0]] = q[1]);
+    // 再生ページの処理
     if(location.pathname.startsWith("/watch") || location.pathname.startsWith("/common/watch")){
       const detailedButton = document.getElementsByClassName("detailed_button")[0];
       const detailedModal = document.getElementsByClassName("detailed_modal")[0];
@@ -22,9 +42,7 @@
           videoPlayer.loop(!old);
           loopIcon.classList[old ? "remove" : "add"]("loop_enable");
         });
-        videoPlayer.src({
-          src, type: format
-        });
+        videoPlayer.src({src, type: format});
         videoPlayer.one("play", () => {
           if(length > 0){
             videoPlayer.duration(length);
@@ -47,22 +65,29 @@
         });
       }
       if(location.search.length > 0){
-        const searchParams = {} as {[key:string]:string};
-        location.search
-          .substring(1)
-          .split("&")
-          .map(p => p.split("=").map(t => decodeURIComponent(t)))
-          .forEach(q => searchParams[q[0]] = q[1]);
-        window.fetch(`/video_fetch?sid=${searchParams.sid}` + (searchParams.hr === "on" ? "&hr=on" : ""))
-        .then(res => res.json())
+        window.fetch(`/video_fetch?sid=${searchParams.sid}` + "&sval=" + searchParams.sval + (searchParams.hr === "on" ? "&hr=on" : ""))
+        .then(res => { 
+          if(res.status !== 200){
+            throw "動画の取得中に問題が発生しました: " + res.status
+          }
+          return res.json();
+        })
         .then(json => {
-          const playbackUrl = `/video?sid=${searchParams.sid}&key=${json.key}` + (searchParams.hr === "on" ? "&hr=on" : "");
+          const playbackUrl = `/video?sid=${searchParams.sid}&key=${json.key}&sval=${searchParams.sval}&&ott=${json.ott}` + (searchParams.hr === "on" ? "&hr=on" : "");
           initPlayer(playbackUrl, json.format, json.length);
         })
         .catch(e => {
           window.alert("エラーが発生しました: " + e);
-        })
+        });
       }
+      // セッション維持
+      const interval = setInterval(() => {
+        window.fetch(`/alive?sval=${searchParams.sval}`).then(res => {
+          if(res.status !== 204){
+            clearInterval(interval);
+          }
+        }).catch(()=>null);
+      }, 5 * 60 * 1000);
     }
   });
 })();

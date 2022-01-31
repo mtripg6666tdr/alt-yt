@@ -3,7 +3,8 @@ import * as path from "path";
 import * as fs from "fs";
 import * as ytsr from "ytsr";
 import sha256 from 'crypto-js/sha256';
-import { respondError } from "../util";
+import { parseCookie, respondError } from "../util";
+import { SessionManager } from "../session";
 
 const SID_CACHE = {} as {[sid:string]:{
   search:Promise<ytsr.Result>,
@@ -16,6 +17,15 @@ export async function handleSearch(req:Request, res:Response){
     const query = req.query["q"]?.toString();
     const sid = req.query["sid"]?.toString();
     const hr = req.query["hr"]?.toString() === "on";
+    const cookie = req.headers.cookie && parseCookie(req.headers.cookie);
+    const key = cookie && cookie.A_SID;
+    const sval = req.query["sval"]?.toString();
+    const session = key && SessionManager.instance.update(key);
+    if(!sval || !session || session.value !== sval){
+      respondError(res, "セッションが切れているか、URLが無効です。", 401);
+      return;
+    }
+    SessionManager.instance.revokeToken(key);
     if(query){
       const hash = sha256(query).toString();
       SID_CACHE[hash] = {
@@ -23,7 +33,7 @@ export async function handleSearch(req:Request, res:Response){
         query
       };
       res.writeHead(301, {
-        "Location": "/search?sid=" + hash + (hr ? "&hr=on" : ""),
+        "Location": "/search?sid=" + hash + "&sval=" + sval + (hr ? "&hr=on" : ""),
         "Cache-Control": "no-store",
       });
       res.end();
@@ -35,11 +45,11 @@ export async function handleSearch(req:Request, res:Response){
         return;
       }
       const items = result.items.filter(i => i.type === "video");
-      const html = generateHtml(template, query, query, items, hr);
+      const html = generateHtml(template, query, items, hr, sval);
       res.writeHead(200, {"Cotent-Type": "text/html; charset=UTF-8"});
       res.end(html);
     }else{
-      throw "不正なアクセスです";
+      respondError(res, "不正なアクセスです", 403);
     }
   }
   catch(e){
@@ -47,7 +57,7 @@ export async function handleSearch(req:Request, res:Response){
   }
 }
 
-function generateHtml(template:string, currentQuery:string, query:string, items:ytsr.Item[], hr:boolean){
+function generateHtml(template:string, query:string, items:ytsr.Item[], hr:boolean, sval:string){
   const cardHtml = `
   <div class="search_card">
     <a href="{url}">
@@ -75,17 +85,17 @@ function generateHtml(template:string, currentQuery:string, query:string, items:
     const item = items[i] as ytsr.Video;
     const description = "長さ:" + item.duration + ", " + item.views + "回視聴, " + item.uploadedAt + "<br>" + (item.description?.replace(/\r\n/g, "\r").replace(/\r/g, "\n").replace(/\n/g, " ") || "");
     cards += cardHtml
-      .replace(/{url}/, "/watch?v=" + item.id + (hr ? "&hr=on" : ""))
-      .replace(/{thumb}/, "proxy?url=" + encodeURIComponent(item.thumbnails[0].url))
+      .replace(/{url}/, "/watch?v=" + item.id + "&sval=" + sval + (hr ? "&hr=on" : ""))
+      .replace(/{thumb}/, "proxy?url=" + encodeURIComponent(item.thumbnails[0].url) + "&sval=" + sval)
       .replace(/{title}/, item.title)
-      .replace(/{channel_thumb}/, "proxy?url=" + encodeURIComponent(item.author.avatars[0].url))
+      .replace(/{channel_thumb}/, "proxy?url=" + encodeURIComponent(item.author.avatars[0].url) + "&sval=" + sval)
       .replace(/{channel}/, item.author.name)
       .replace(/{description}/, description.length > 200 ? description.substring(0, 200) : description)
     ;
   }
   const result = template
     .replace(/{query}/, query)
-    .replace(/{current_query}/, currentQuery)
+    .replace(/{current_query}/, query)
     .replace(/{hr}/, hr ? "checked": "")
     .replace(/{search_result}/, cards)
   ;

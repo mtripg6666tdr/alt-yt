@@ -12,6 +12,9 @@ input, button {
   margin-right: -3px;
   margin-left: -3px;
 }
+label {
+  white-space: nowrap;
+}
 input[type="checkbox"] {
   margin: 3px;
 }
@@ -32,25 +35,53 @@ div.search_result {
 div.search_result div.search_card {
   width: 50vw;
   height: 16vh;
+  min-height: 120px;
   margin-bottom: 0px;
   margin-top: 0px;
   border: 1px solid white;
+  border-radius: 5px;
+  margin-bottom: 2px;
+}
+@media screen and (max-width: 900px) {
+  input[type="text"] {
+    max-width: 70vw;
+  }
+  div.search_result {
+    width: 90vw;
+  }
+  div.search_result div.search_card {
+    width: 90vw;
+  }
+}
+@media screen and (max-width: 500px) {
+  div.search_result div.search_card {
+    height: 40vh;
+  }
+  div.search_result div.search_card div.search_thumb {
+    height: 15vh;
+    min-height: calc(120px - 1vh);
+  }
+  div.search_result div.search_card a {
+    flex-direction: column;
+  }
 }
 div.search_result div.search_card a {
   display: flex;
   text-decoration: none;
   color: white;
-  height: 16vh;
+  height: 100%;
 }
 div.search_result div.search_card div.search_thumb {
   aspect-ratio: 16/9;
 }
 div.search_result div.search_card div.search_thumb img {
   height: 15vh;
+  min-height: calc(120px - 1vh);
   margin-top: 0.5vh;
   margin-left: 0.5vh;
   margin-bottom: 0.5vh;
   width: 26.7vh;
+  min-width: calc(213.3px - 1vh);
   aspect-ratio: 16/9;
 }
 div.search_result div.search_card div.search_detail {
