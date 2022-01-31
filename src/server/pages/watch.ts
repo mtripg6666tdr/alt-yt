@@ -269,6 +269,10 @@ export async function handlePlayback(req:Request, res:Response){
     }
   }
   catch(e){
-    respondError(res, e.toString());
+    try{
+      console.log(e);
+      res.end();
+    }
+    catch{}
   }
 }
