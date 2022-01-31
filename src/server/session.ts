@@ -1,10 +1,23 @@
 import { SHA256 } from "crypto-js";
+import * as ytdl from "ytdl-core";
+import * as ytsr from "ytsr";
 import { generateRandomNumber } from "./util";
 
 type SessionData = {
   lastAccess:Date;
   value:string;
   token:string[];
+  search:{[sid:string]:{
+    search:Promise<ytsr.Result>,
+    query:string,
+  }};
+  watch:{[sid:string]:{
+    vid:string;
+    info:Promise<ytdl.videoInfo>;
+    format:ytdl.videoFormat;
+    vformat:ytdl.videoFormat;
+    key:string;
+  }};
 };
 export class SessionManager {
   private constructor(){
@@ -22,7 +35,9 @@ export class SessionManager {
     this.sessions[key] = {
       lastAccess: new Date(),
       value: SHA256(generateRandomNumber().toString()).toString(),
-      token: []
+      token: [],
+      watch: {},
+      search: {},
     };
     return key;
   }

@@ -1,6 +1,5 @@
 import * as fs from "fs";
 import * as path from "path";
-import { Transform } from "stream";
 import { http, https } from "follow-redirects";
 import { Request, Response } from "express";
 import { SHA256 } from "crypto-js";
@@ -10,13 +9,6 @@ import * as ytdl from "ytdl-core";
 import { CalcHourMinSec, generateRandomNumber, parseCookie, respondError, ytUserAgent } from "../util";
 import { SessionManager } from "../session";
 
-const SID_CACHE = {} as {[sid:string]:{
-  vid:string;
-  info:Promise<ytdl.videoInfo>;
-  format:ytdl.videoFormat;
-  vformat:ytdl.videoFormat;
-  key:string;
-}};
 const tempalte = fs.readFileSync(path.join(__dirname, "../../common/watch.html"), {encoding:"utf-8"});
 
 export async function handleWatch(req:Request, res:Response){
@@ -28,6 +20,7 @@ export async function handleWatch(req:Request, res:Response){
     const key = cookie && cookie.A_SID;
     const sval = req.query["sval"]?.toString();
     const session = key && SessionManager.instance.update(key);
+    const SID_CACHE = session && session.watch;
     if(!sval || !session || session.value !== sval){
       respondError(res, "セッションが切れているか、URLが無効です。", 401);
       return;
@@ -147,6 +140,7 @@ export async function handleFetch(req:Request, res:Response){
     const key = cookie && cookie.A_SID;
     const sval = req.query["sval"]?.toString();
     const session = key && SessionManager.instance.update(key);
+    const SID_CACHE = session && session.watch;
     if(!sval || !session || session.value !== sval){
       respondError(res, "セッションが切れているか、URLが無効です。", 401);
       return;
@@ -202,6 +196,7 @@ export async function handlePlayback(req:Request, res:Response){
     const skey = cookie && cookie.A_SID;
     const sval = req.query["sval"]?.toString();
     const session = skey && SessionManager.instance.update(skey);
+    const SID_CACHE = session && session.watch;
     if(!sval || !session || session.value !== sval || !SessionManager.instance.validateToken(skey, ott)){
       respondError(res, "セッションが切れているか、URLが無効です。", 401);
       return;

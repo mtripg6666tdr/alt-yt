@@ -7,10 +7,6 @@ import sha256 from 'crypto-js/sha256';
 import { parseCookie, respondError } from "../util";
 import { SessionManager } from "../session";
 
-const SID_CACHE = {} as {[sid:string]:{
-  search:Promise<ytsr.Result>,
-  query:string,
-}};
 const template = fs.readFileSync(path.join(__dirname, "../../common/search.html"), {encoding:"utf-8"});
 
 export async function handleSearch(req:Request, res:Response){
@@ -22,6 +18,7 @@ export async function handleSearch(req:Request, res:Response){
     const key = cookie && cookie.A_SID;
     const sval = req.query["sval"]?.toString();
     const session = key && SessionManager.instance.update(key);
+    let SID_CACHE = session && session.search;
     if(!sval || !session || session.value !== sval){
       respondError(res, "セッションが切れているか、URLが無効です。", 401);
       return;
@@ -36,6 +33,7 @@ export async function handleSearch(req:Request, res:Response){
         res.end();
         return;
       }
+      SID_CACHE = session.search = {};
       const hash = sha256(query).toString();
       SID_CACHE[hash] = {
         search: ytsr.default(query, {gl: "JP", hl: "ja", limit: 30}).catch(e => e.toString()),
