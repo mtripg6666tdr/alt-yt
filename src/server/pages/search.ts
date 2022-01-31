@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import * as path from "path";
 import * as fs from "fs";
+import * as ytdl from "ytdl-core";
 import * as ytsr from "ytsr";
 import sha256 from 'crypto-js/sha256';
 import { parseCookie, respondError } from "../util";
@@ -27,6 +28,14 @@ export async function handleSearch(req:Request, res:Response){
     }
     SessionManager.instance.revokeToken(key);
     if(query){
+      if(ytdl.validateURL(query)){
+        const id = ytdl.getURLVideoID(query);
+        res.writeHead(301, {
+          "Location": "/watch?v=" + id + "&sval=" + sval + (hr ? "&hr=on" : ""),
+        });
+        res.end();
+        return;
+      }
       const hash = sha256(query).toString();
       SID_CACHE[hash] = {
         search: ytsr.default(query, {gl: "JP", hl: "ja", limit: 30}).catch(e => e.toString()),
