@@ -42,9 +42,8 @@ export function handleProxy(req:Request, res:Response){
         agent: req.headers.connection === "keep-alive" ? new httpLib[durl.protocol as keyof typeof httpLib].Agent({keepAlive:true}) : undefined
       }, (reqres) => {
         const headers = Object.assign({}, reqres.headers);
-        if(headers["set-cookie"]){
-          delete headers["set-cookie"];
-        }
+        if(headers["set-cookie"]) delete headers["set-cookie"];
+        if(headers["location"]) headers["Location"] = `/proxy/${Buffer.from(headers.location).toString("base64")}/sval/${sval}`;
         res.writeHead(reqres.statusCode, Object.assign({}, headers, {
           "X-AYP": "1"
         }));
