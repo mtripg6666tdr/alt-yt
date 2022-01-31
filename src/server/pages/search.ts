@@ -106,6 +106,7 @@ function generateHtml(template:string, query:string, items:ytsr.Item[], hr:boole
     .replace(/{query}/, query)
     .replace(/{current_query}/, query)
     .replace(/{hr}/, hr ? "checked": "")
+    .replace(/{sval}/, sval)
     .replace(/{search_result}/, cards)
   ;
   return result;
