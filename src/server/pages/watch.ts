@@ -210,7 +210,7 @@ export async function handlePlayback(req:Request, res:Response){
         let headers = {} as {[key:string]:string};
         if(req.headers.range) headers["Range"] = req.headers.range;
         if(req.headers.accept) headers["Accept"] = req.headers.accept;
-        if(req.connection) headers["Connection"] = req.headers.connection;
+        if(req.headers.connection) headers["Connection"] = req.headers.connection;
         ({"http:": http, "https:": https})[url.protocol].request({
           protocol: url.protocol,
           host: url.host,
