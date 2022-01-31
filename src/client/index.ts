@@ -47,7 +47,11 @@
           if(length > 0){
             videoPlayer.duration(length);
           }
-        })
+        });
+        // かさね要素
+        const videoCover = document.createElement("div");
+        videoCover.classList.add("video_cover");
+        document.getElementById("video_player").appendChild(videoCover);
       };
       let detailedOpened = false;
       if(detailedButton){
