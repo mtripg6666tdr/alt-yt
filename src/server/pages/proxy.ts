@@ -51,6 +51,7 @@ export function handleProxy(req:Request, res:Response){
         reqres
           .on("error", () => res.end())
           .pipe(res)
+          .on("close", () => reqres.destroy())
       }).on("error", (e) => {
         respondError(res, e.toString());
       }).end();
