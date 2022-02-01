@@ -249,12 +249,14 @@ export async function handlePlayback(req:Request, res:Response){
             const headers = Object.assign({}, remoteRes.headers);
             if(headers["content-length"]) delete headers["content-length"];
             if(headers["set-cookie"]) delete headers["set-cookie"];
+            const buffer = new PassThrough({highWaterMark: 1 * 1024 * 1024 /* 1MB */});
             res.writeHead(remoteRes.statusCode, headers);
             remoteRes
-              .on("error", () => res.destroy())
+              .on("error", () => [res, buffer].forEach(s => s.destroy()))
+              .pipe(buffer)
               .pipe(res)
-              .on("error", () => remoteRes.destroy())
-              .on("close", () => remoteRes.destroy())
+              .on("error", () => [remoteRes, buffer].forEach(s => s.destroy()))
+              .on("close", () => [remoteRes, buffer].forEach(s => s.destroy()))
             ;
           }
         })
