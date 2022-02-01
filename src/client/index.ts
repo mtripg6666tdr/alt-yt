@@ -51,6 +51,12 @@
         // かさね要素
         const videoCover = document.createElement("div");
         videoCover.classList.add("video_cover");
+        videoCover.addEventListener("click", ()=>{
+          if(videoPlayer.paused()) 
+            videoPlayer.play();
+          else 
+            videoPlayer.pause();
+        });
         document.getElementById("video_player").appendChild(videoCover);
       };
       let detailedOpened = false;

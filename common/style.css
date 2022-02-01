@@ -187,7 +187,7 @@ div.player_container div.detailed_button {
   transition: bottom 0.3s;
 }
 div.player_container div.detailed_button.opened {
-  bottom: 93vh;
+  bottom: 90vh;
   transition: bottom 0.3s;
 }
 div.player_container div.detailed_modal {
@@ -195,15 +195,15 @@ div.player_container div.detailed_modal {
   left: 10vw;
   width: 80vw;
   height: 90vh;
-  top: 100vh;
+  bottom: -90vh;
   background-color: #333333;
   z-index: 2;
-  transition: top 0.3s;
+  transition: bottom 0.3s;
   overflow-y: scroll;
 }
 div.player_container div.detailed_modal.opened {
-  top: 7vh;
-  transition: top 0.3s;
+  bottom: 0px;
+  transition: bottom 0.3s;
 }
 div.player_container div.detailed_modal_bg {
   position: fixed;
