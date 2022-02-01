@@ -52,10 +52,14 @@
         const videoCover = document.createElement("div");
         videoCover.classList.add("video_cover");
         videoCover.addEventListener("click", ()=>{
-          if(videoPlayer.paused()) 
-            videoPlayer.play();
-          else 
-            videoPlayer.pause();
+          if(videoPlayer.userActive()){
+            if(videoPlayer.paused()) 
+              videoPlayer.play();
+            else 
+              videoPlayer.pause();
+          }else{
+            videoPlayer.userActive(true);
+          }
         });
         document.getElementById("video_player").appendChild(videoCover);
       };

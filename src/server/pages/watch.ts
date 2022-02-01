@@ -1,5 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
+import { PassThrough } from "stream";
 import { http, https } from "follow-redirects";
 import { Request, Response } from "express";
 import { SHA256 } from "crypto-js";
@@ -102,7 +103,7 @@ function generateHtml(template:string, info:ytdl.videoInfo, items:ytdl.relatedVi
       .replace(/{url}/, "/watch?v=" + item.id + "&sval=" + sval + (hr ? "&hr=on" : ""))
       .replace(/{thumb}/, "proxy?url=" + encodeURIComponent(item.thumbnails[0].url) + "&sval=" + sval)
       .replace(/{title}/, item.title)
-      .replace(/{channel_thumb}/, "proxy?url=" + encodeURIComponent(item.thumbnails[0].url) + "&sval=" + sval)
+      .replace(/{channel_thumb}/, "proxy?url=" + encodeURIComponent(typeof item.author === "string" ? "" : item.author.thumbnails[0].url) + "&sval=" + sval)
       .replace(/{channel}/, typeof item.author === "string" ? item.author : item.author.name)
       .replace(/{description}/, description.length > 200 ? description.substring(0, 200) : description)
     ;
@@ -228,6 +229,7 @@ export async function handlePlayback(req:Request, res:Response){
           if(isLive){
             const headers = Object.assign({}, remoteRes.headers);
             if(headers["content-length"]) delete headers["content-length"];
+            if(headers["set-cookie"]) delete headers["set-cookie"];
             res.writeHead(remoteRes.statusCode, headers);
             res.flushHeaders();  
             const filter = new LineTransformStream((text) => {
@@ -237,21 +239,23 @@ export async function handlePlayback(req:Request, res:Response){
                 return text;
             });
             remoteRes
-              .on("error", () => res.end())
-              .on("close", () => res.end())
+              .on("error", () => [filter, res].forEach(s => s.destroy()))
               .pipe(filter)
               .pipe(res)
+              .on("error", () => [filter, remoteRes].forEach(s => s.destroy()))
+              .on("close", () => [filter, remoteRes].forEach(s => s.destroy()))
+            ;
+          }else{
+            const headers = Object.assign({}, remoteRes.headers);
+            if(headers["content-length"]) delete headers["content-length"];
+            if(headers["set-cookie"]) delete headers["set-cookie"];
+            res.writeHead(remoteRes.statusCode, headers);
+            remoteRes
+              .on("error", () => res.destroy())
+              .pipe(res)
+              .on("error", () => remoteRes.destroy())
               .on("close", () => remoteRes.destroy())
             ;
-        }else{
-            res.writeHead(remoteRes.statusCode, remoteRes.headers);
-            res.flushHeaders();
-            remoteRes
-              .on("error", () => res.end())
-              .on("close", () => res.end())
-              .pipe(res)
-              .on("close", () => remoteRes.destroy())
-          ;
           }
         })
         .on("error", (e) => {

@@ -90,7 +90,12 @@ function generateHtml(template:string, query:string, items:ytsr.Item[], hr:boole
   let cards = "";
   for(let i = 0; i < items.length; i++){
     const item = items[i] as ytsr.Video;
-    const description = "長さ:" + item.duration + ", " + item.views + "回視聴, " + item.uploadedAt + "<br>" + (item.description?.replace(/\r\n/g, "\r").replace(/\r/g, "\n").replace(/\n/g, " ") || "");
+    const description = (()=>{
+      if(item.isLive)
+        return "長さ:ライブストリーム, " + item.views + "人が視聴中<br>" + (item.description?.replace(/\r\n/g, "\r").replace(/\r/g, "\n").replace(/\n/g, " ") || "")
+      else
+        return "長さ:" + item.duration + ", " + item.views + "回視聴, " + item.uploadedAt + "<br>" + (item.description?.replace(/\r\n/g, "\r").replace(/\r/g, "\n").replace(/\n/g, " ") || "");
+    })();
     cards += cardHtml
       .replace(/{url}/, "/watch?v=" + item.id + "&sval=" + sval + (hr ? "&hr=on" : ""))
       .replace(/{thumb}/, "proxy?url=" + encodeURIComponent(item.thumbnails[0].url) + "&sval=" + sval)
