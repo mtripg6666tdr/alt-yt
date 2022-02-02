@@ -62,6 +62,43 @@
           }
         });
         document.getElementById("video_player").appendChild(videoCover);
+        // バッファ情報表示
+        const rawVideoPlayer = document.getElementsByTagName("video")[0];
+        let bufShow = false;
+        let interval = -1;
+        let bufElem = document.createElement("div");
+        document.body.appendChild(bufElem);
+        bufElem.style.position = "fixed";
+        bufElem.style.top = "0px"
+        bufElem.style.right = "0px";
+        bufElem.style.zIndex = "999";
+        bufElem.style.display = "none";
+        const button = document.createElement("button");
+        button.textContent = "バッファ情報表示切り替え";
+        button.style.fontSize = "50%";
+        document.getElementsByClassName("detailed_modal")[0].appendChild(button);
+        button.addEventListener("click", () => {
+          if(bufShow){
+            clearInterval(interval);
+            bufElem.style.display = "none";
+            bufShow = false;
+          }else{
+            // @ts-ignore
+            interval = setInterval(()=>{
+              const current = rawVideoPlayer.currentTime;
+              for(let i = 0; i < rawVideoPlayer.buffered.length; i++){
+                const start = rawVideoPlayer.buffered.start(i);
+                const end = rawVideoPlayer.buffered.end(i);
+                if(start <= current && current <= end){
+                  bufElem.textContent = "Buffered: " + Math.floor((end - current) * 100) / 100 + "s";
+                  break;
+                }
+              }
+            }, 1000);
+            bufElem.style.display = "block";
+            bufShow = true;
+          }
+        })
       };
       let detailedOpened = false;
       if(detailedButton){
