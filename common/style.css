@@ -183,7 +183,7 @@ div.player_container div.detailed_button {
   color: white;
   border-radius: 10px 10px 0px 0px;
   cursor: pointer;
-  z-index: 1;
+  z-index: 3;
   transition: bottom 0.3s;
 }
 div.player_container div.detailed_button.opened {
