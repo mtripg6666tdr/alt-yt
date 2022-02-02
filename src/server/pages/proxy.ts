@@ -11,7 +11,7 @@ export function handleProxy(req:Request, res:Response){
       if(req.query["url"]){
         return decodeURIComponent(req.query["url"].toString() || "")
       }else if(req.params["url"]){
-        return Buffer.from(req.params["url"], "base64").toString();
+        return Buffer.from(req.params["url"], "base64").toString() + (req.path.length > 1 ? req.path.substring(1) : "");
       }else
         throw null;
     })();

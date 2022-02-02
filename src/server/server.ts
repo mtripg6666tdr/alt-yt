@@ -32,7 +32,12 @@ export function createServer(){
       }
     })
     .get("/proxy", (req, res) => handleProxy(req, res))
-    .get("/proxy/:url/sval/:sval", (req, res) => handleProxy(req, res))
+    .use("/proxy/:url/sval/:sval", (req, res, next) => {
+      if(req.method === "GET") 
+        handleProxy(req, res);
+      else
+        next();
+    })
     .get("/search", (req, res) => handleSearch(req, res))
     .get("/watch", (req, res) => handleWatch(req, res))
     .get("/video_fetch", (req, res) => handleFetch(req, res))

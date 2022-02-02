@@ -169,14 +169,23 @@ export async function handleFetch(req:Request, res:Response){
         }));
       }else{
         const format = SID_CACHE[sid].format = ytdl.chooseFormat(info.formats, {
-          filter: "audioandvideo", quality: "highest"
+          filter: info.formats.some(f => f.isDashMPD) ? f => f.isDashMPD : "videoandaudio", quality: "highest"
         });
-        res.writeHead(200, {"Content-Type": "application/json; charset=UTF-8"});
-        res.end(JSON.stringify({
-          key: SID_CACHE[sid].key,
-          format: `video/${format.container}`,
-          ott: SessionManager.instance.createToken(key)
-        }));
+        if(format.isDashMPD){
+          res.writeHead(200, {"Content-Type": "application/json; charset=UTF-8"});
+          res.end(JSON.stringify({
+            key: SID_CACHE[sid].key,
+            format: `application/dash+xml`,
+            ott: SessionManager.instance.createToken(key)
+          }))
+        }else{
+          res.writeHead(200, {"Content-Type": "application/json; charset=UTF-8"});
+          res.end(JSON.stringify({
+            key: SID_CACHE[sid].key,
+            format: `video/${format.container}`,
+            ott: SessionManager.instance.createToken(key)
+          }));
+        }
       }
     }else{
       respondError(res, "不正なアクセスです", 403);
@@ -226,12 +235,13 @@ export async function handlePlayback(req:Request, res:Response){
             ...headers
           }
         }, remoteRes => {
+          // prepare header
+          const headers = Object.assign({}, remoteRes.headers);
+          if(headers["set-cookie"]) delete headers["set-cookie"];
+
           if(isLive){
-            const headers = Object.assign({}, remoteRes.headers);
             if(headers["content-length"]) delete headers["content-length"];
-            if(headers["set-cookie"]) delete headers["set-cookie"];
             res.writeHead(remoteRes.statusCode, headers);
-            res.flushHeaders();  
             const filter = new LineTransformStream((text) => {
               if(text.startsWith("https"))
                 return `/proxy/${Buffer.from(text).toString("base64")}/sval/${sval}`;
@@ -245,10 +255,24 @@ export async function handlePlayback(req:Request, res:Response){
               .on("error", () => [filter, remoteRes].forEach(s => s.destroy()))
               .on("close", () => [filter, remoteRes].forEach(s => s.destroy()))
             ;
-          }else{
-            const headers = Object.assign({}, remoteRes.headers);
+          }else if(format.isDashMPD){
             if(headers["content-length"]) delete headers["content-length"];
-            if(headers["set-cookie"]) delete headers["set-cookie"];
+            headers["content-type"] = "application/dash+xml";
+            const chunks = [] as Buffer[];
+            remoteRes
+              .on("data", (chunk) => chunks.push(Buffer.from(chunk)))
+              .on("end", () => {
+                const mpd = Buffer.concat(chunks).toString("utf-8")
+                  .replace(/<BaseURL>(.+?)<\/BaseURL>/g, baseUrl => {
+                    const encoded = Buffer.from(baseUrl.match(/<BaseURL>(?<url>.+?)<\/BaseURL>/).groups["url"]).toString("base64");
+                    return `<BaseURL>${new URL(req.headers.referer).origin}/proxy/${encoded}/sval/${sval}/</BaseURL>`
+                  });
+                res.end(mpd);
+              })
+              .on("error", () => [remoteRes, res].forEach(s => s.destroy()))
+              ;
+            res.writeHead(remoteRes.statusCode, headers);
+          }else{
             const buffer = new PassThrough({highWaterMark: 1 * 1024 * 1024 /* 1MB */});
             res.writeHead(remoteRes.statusCode, headers);
             remoteRes
