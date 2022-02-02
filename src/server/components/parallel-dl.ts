@@ -56,7 +56,7 @@ class ParallelStreamManager extends EventEmitter {
     this.urlObj = new URL(url);
     console.log("manager initialized from", rangeBegin, "to", rangeEnd);
     ["error", "close"].forEach(ev => res.on(ev, () => this.destroy()));
-    this.contentBuffer[++this.current] = new ParallelPartialStream(this, this.urlObj, this.rangeBegin, this.chunkLength, this.current, this.additionalHeaders, rangeEnd)
+    this.contentBuffer[++this.current] = new ParallelPartialStream(this, "stream", this.urlObj, this.rangeBegin, this.chunkLength, this.current, this.additionalHeaders, rangeEnd)
       .on("finish", (stream:Readable) => {
         console.log("finish #0");
         res.writeHead(206, Object.assign({
@@ -105,7 +105,7 @@ class ParallelStreamManager extends EventEmitter {
     if(this.current + 1 < this.totalChunks){
       console.log("begin retrive next approved #", this.current + 1);
       const current = ++this.current
-      this.contentBuffer[current] = new ParallelPartialStream(this, this.urlObj, this.rangeBegin, this.chunkLength, current, this.additionalHeaders, this.rangeEnd)
+      this.contentBuffer[current] = new ParallelPartialStream(this, "buffer", this.urlObj, this.rangeBegin, this.chunkLength, current, this.additionalHeaders, this.rangeEnd)
     }else{
       console.log("begin retrive next failed (out of range) #", this.current + 1)
     }
@@ -120,6 +120,8 @@ class ParallelStreamManager extends EventEmitter {
   }
 }
 
+type ParallelMode = "buffer"|"stream";
+
 class ParallelPartialStream extends EventEmitter {
   private buf = [] as Buffer[];
   result = null as PassThrough;
@@ -127,9 +129,15 @@ class ParallelPartialStream extends EventEmitter {
   private _destroyed = false;
   get destroyed(){return this._destroyed};
   private destroyListener = ()=>{};
+  private _mode:ParallelMode = "buffer";
+  get mode(){return this._mode};
 
-  constructor(private parentManager:ParallelStreamManager, url:URL, begin:number, private chunkLength:number, private current:number, additinalHeaders:{[key:string]:string}, private overallRangeEnd:number){
+  constructor(private parentManager:ParallelStreamManager, mode:ParallelMode = "buffer", url:URL, begin:number, private chunkLength:number, private current:number, additinalHeaders:{[key:string]:string}, private overallRangeEnd:number){
     super();
+    this._mode = mode;
+    if(this._mode === "stream"){
+      console.log("stream", "#" + current, "will be transfer as ALIVE STREAM");
+    }
     let start = begin + chunkLength * current;
     let end = begin + chunkLength * (current + 1) - 1;
     console.log("stream", "#" + current, "init range from ", start, "to", end);
@@ -163,19 +171,33 @@ class ParallelPartialStream extends EventEmitter {
         if(headers["content-range"]) delete headers["content-range"];
         this.parentManager.responseHeaders = headers;
       }
-      reqres
-        .on("data", chunk => this.buf.push(Buffer.from(chunk)))
-        .on("error", (er) => this.parentManager.emit("error", er))
-        .on("end", () => {
-          const resultbuf = Buffer.concat(this.buf);
-          this.result = new PassThrough({
-            highWaterMark: this.chunkLength
-          });
-          this.result.end(resultbuf);
-          this.isFinished = true;
-          this.result.on("end", () => this.destroy());
-          this.emit("finish", this.result, this.current);
+      if(this.mode === "buffer"){
+        reqres
+          .on("data", chunk => this.buf.push(Buffer.from(chunk)))
+          .on("error", (er) => this.parentManager.emit("error", er))
+          .on("end", () => {
+            const resultbuf = Buffer.concat(this.buf);
+            this.result = new PassThrough({
+              highWaterMark: this.chunkLength
+            });
+            this.result.end(resultbuf);
+            this.isFinished = true;
+            this.result.on("end", () => this.destroy());
+            this.emit("finish", this.result, this.current);
+          })
+          ;
+      }else{
+        this.result = new PassThrough({
+          highWaterMark: this.chunkLength
         });
+        reqres
+          .on("error", (er) => this.parentManager.emit("error", er))
+          .pipe(this.result)
+          .on("end", () => this.destroy());
+          ;
+        this.isFinished = true;
+        this.emit("finish", this.result, this.current);
+      }
     })
     .on("error", (er) => this.parentManager.emit("error", er))
     .end();
