@@ -9,6 +9,7 @@ import LineTransformStream from "line-transform-stream";
 import * as ytdl from "ytdl-core";
 import { CalcHourMinSec, generateRandomNumber, parseCookie, respondError, ytUserAgent } from "../util";
 import { SessionManager } from "../session";
+import { downloadParallel } from "../components/parallel-dl";
 
 const tempalte = fs.readFileSync(path.join(__dirname, "../../common/watch.html"), {encoding:"utf-8"});
 
@@ -220,74 +221,69 @@ export async function handlePlayback(req:Request, res:Response){
       const info = await pinfo;
       if(!hr){
         const isLive = info.videoDetails.liveBroadcastDetails && info.videoDetails.liveBroadcastDetails.isLiveNow;
-        const url = new URL(format.url);
         let headers = {} as {[key:string]:string};
         if(req.headers.range) headers["Range"] = req.headers.range;
         if(req.headers.accept) headers["Accept"] = req.headers.accept;
         if(req.headers.connection) headers["Connection"] = req.headers.connection;
-        ({"http:": http, "https:": https})[url.protocol].request({
-          protocol: url.protocol,
-          host: url.host,
-          path: url.pathname + url.search + url.hash,
-          method: "GET",
-          headers: {
-            "User-Agent": ytUserAgent,
-            ...headers
-          }
-        }, remoteRes => {
-          // prepare header
-          const headers = Object.assign({}, remoteRes.headers);
-          if(headers["set-cookie"]) delete headers["set-cookie"];
 
-          if(isLive){
-            if(headers["content-length"]) delete headers["content-length"];
-            res.writeHead(remoteRes.statusCode, headers);
-            const filter = new LineTransformStream((text) => {
-              if(text.startsWith("https"))
-                return `/proxy/${Buffer.from(text).toString("base64")}/sval/${sval}`;
-              else
-                return text;
-            });
-            remoteRes
-              .on("error", () => [filter, res].forEach(s => s.destroy()))
-              .pipe(filter)
-              .pipe(res)
-              .on("error", () => [filter, remoteRes].forEach(s => s.destroy()))
-              .on("close", () => [filter, remoteRes].forEach(s => s.destroy()))
-            ;
-          }else if(format.isDashMPD){
-            if(headers["content-length"]) delete headers["content-length"];
-            headers["content-type"] = "application/dash+xml";
-            const chunks = [] as Buffer[];
-            remoteRes
-              .on("data", (chunk) => chunks.push(Buffer.from(chunk)))
-              .on("end", () => {
-                const mpd = Buffer.concat(chunks).toString("utf-8")
-                  .replace(/<BaseURL>(.+?)<\/BaseURL>/g, baseUrl => {
-                    const encoded = Buffer.from(baseUrl.match(/<BaseURL>(?<url>.+?)<\/BaseURL>/).groups["url"]).toString("base64");
-                    return `<BaseURL>${new URL(req.headers.referer).origin}/proxy/${encoded}/sval/${sval}/</BaseURL>`
-                  });
-                res.end(mpd);
-              })
-              .on("error", () => [remoteRes, res].forEach(s => s.destroy()))
+        if(isLive || format.isDashMPD){
+          const url = new URL(format.url);
+          ({"http:": http, "https:": https})[url.protocol].request({
+            protocol: url.protocol,
+            host: url.host,
+            path: url.pathname + url.search + url.hash,
+            method: "GET",
+            headers: {
+              "User-Agent": ytUserAgent,
+              ...headers
+            }
+          }, remoteRes => {
+            // prepare header
+            const headers = Object.assign({}, remoteRes.headers);
+            if(headers["set-cookie"]) delete headers["set-cookie"];
+
+            if(isLive){
+              if(headers["content-length"]) delete headers["content-length"];
+              res.writeHead(remoteRes.statusCode, headers);
+              const filter = new LineTransformStream((text) => {
+                if(text.startsWith("https"))
+                  return `/proxy/${Buffer.from(text).toString("base64")}/sval/${sval}`;
+                else
+                  return text;
+              });
+              remoteRes
+                .on("error", () => [filter, res].forEach(s => s.destroy()))
+                .pipe(filter)
+                .pipe(res)
+                .on("error", () => [filter, remoteRes].forEach(s => s.destroy()))
+                .on("close", () => [filter, remoteRes].forEach(s => s.destroy()))
               ;
-            res.writeHead(remoteRes.statusCode, headers);
-          }else{
-            const buffer = new PassThrough({highWaterMark: 1 * 1024 * 1024 /* 1MB */});
-            res.writeHead(remoteRes.statusCode, headers);
-            remoteRes
-              .on("error", () => [res, buffer].forEach(s => s.destroy()))
-              .pipe(buffer)
-              .pipe(res)
-              .on("error", () => [remoteRes, buffer].forEach(s => s.destroy()))
-              .on("close", () => [remoteRes, buffer].forEach(s => s.destroy()))
-            ;
-          }
-        })
-        .on("error", (e) => {
-          console.log(e);
-          res.end();
-        }).end();
+            }else if(format.isDashMPD){
+              if(headers["content-length"]) delete headers["content-length"];
+              headers["content-type"] = "application/dash+xml";
+              const chunks = [] as Buffer[];
+              remoteRes
+                .on("data", (chunk) => chunks.push(Buffer.from(chunk)))
+                .on("end", () => {
+                  const mpd = Buffer.concat(chunks).toString("utf-8")
+                    .replace(/<BaseURL>(.+?)<\/BaseURL>/g, baseUrl => {
+                      const encoded = Buffer.from(baseUrl.match(/<BaseURL>(?<url>.+?)<\/BaseURL>/).groups["url"]).toString("base64");
+                      return `<BaseURL>${new URL(req.headers.referer).origin}/proxy/${encoded}/sval/${sval}/</BaseURL>`
+                    });
+                  res.end(mpd);
+                })
+                .on("error", () => [remoteRes, res].forEach(s => s.destroy()))
+                ;
+              res.writeHead(remoteRes.statusCode, headers);
+            }
+          })
+          .on("error", (e) => {
+            console.log(e);
+            res.end();
+          }).end();
+        }else{
+          downloadParallel(format.url, headers, 512 * 1024, res);
+        }
       }else{
         const aformat = ytdl.chooseFormat(info.formats, {
           filter: "audio", quality: "highestaudio"
