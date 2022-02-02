@@ -51,7 +51,7 @@ export async function handleSearch(req:Request, res:Response){
         respondError(res, result, 500);
         return;
       }
-      const items = result.items.filter(i => i.type === "video");
+      const items = result.items.filter(i => i.type === "video" && !i.isUpcoming);
       const html = generateHtml(template, query, items, hr, sval);
       res.writeHead(200, {"Cotent-Type": "text/html; charset=UTF-8"});
       res.end(html);
