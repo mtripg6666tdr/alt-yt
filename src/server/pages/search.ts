@@ -91,7 +91,7 @@ function generateHtml(template:string, query:string, items:ytsr.Item[], hr:boole
   for(let i = 0; i < items.length; i++){
     const item = items[i] as ytsr.Video;
     const description = (()=>{
-      if(item.isLive)
+      if(item.isLive || item.badges.includes("ライブ配信中"))
         return "長さ:ライブストリーム, " + item.views + "人が視聴中<br>" + (item.description?.replace(/\r\n/g, "\r").replace(/\r/g, "\n").replace(/\n/g, " ") || "")
       else
         return "長さ:" + item.duration + ", " + item.views + "回視聴, " + item.uploadedAt + "<br>" + (item.description?.replace(/\r\n/g, "\r").replace(/\r/g, "\n").replace(/\n/g, " ") || "");
