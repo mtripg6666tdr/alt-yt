@@ -99,7 +99,12 @@ function generateHtml(template:string, info:ytdl.videoInfo, items:ytdl.relatedVi
         return "不明";
       }
     })(item.length_seconds);
-    const description = "長さ:" + duration + ", " + (item.view_count || "不明") + "回視聴, アップロード:" + (item.published || "不明");
+    const description = (()=>{
+      if(item.isLive)
+        return "長さ:ライブストリーム, " + item.view_count + "人が視聴中";
+      else
+        return "長さ:" + duration + ", " + item.view_count + "回視聴" + (item.published ? ", " + item.published : "");
+    })();
     cards += cardHtml
       .replace(/{url}/, "/watch?v=" + item.id + "&sval=" + sval + (hr ? "&hr=on" : ""))
       .replace(/{thumb}/, "proxy?url=" + encodeURIComponent(item.thumbnails[0].url) + "&sval=" + sval)
