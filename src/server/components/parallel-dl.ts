@@ -58,6 +58,7 @@ class ParallelStreamManager extends EventEmitter {
     ["error", "close"].forEach(ev => res.on(ev, () => this.destroy()));
     this.contentBuffer[++this.current] = new ParallelPartialStream(this, "stream", this.urlObj, this.rangeBegin, this.chunkLength, this.current, this.additionalHeaders, rangeEnd)
       .on("finish", (stream:Readable) => {
+        if(this.destroyed) return;
         console.log("finish #0");
         res.writeHead(206, Object.assign({
           "Content-Range": `bytes ${rangeBegin}-${rangeEnd === -1 ? this.totalLength - 1 : rangeEnd}/${this.totalLength}`,
@@ -153,6 +154,10 @@ class ParallelPartialStream extends EventEmitter {
         "Range": `bytes=${start}-${end === -1 ? "" : end}`
       }
     }, (reqres) => {
+      if(this.destroyed){
+        reqres.destroy();
+        return;
+      }
       if(reqres.statusCode !== 206){
         reqres.destroy();
         this.parentManager.emit("error", "the remote server does not support ranged request");
