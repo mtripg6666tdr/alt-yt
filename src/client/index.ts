@@ -89,7 +89,7 @@
           if(bufShow){
             clearInterval(interval);
             bufElem.style.display = "none";
-            button.textContent = "バッファ情報を隠す";
+            button.textContent = "バッファ情報を表示";
             bufShow = false;
           }else{
             // @ts-ignore
@@ -105,7 +105,7 @@
               }
             }, 1000);
             bufElem.style.display = "block";
-            button.textContent = "バッファ情報を表示";
+            button.textContent = "バッファ情報を隠す";
             bufShow = true;
           }
         })
