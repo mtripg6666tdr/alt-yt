@@ -12,6 +12,13 @@
         return false;
       }
     });
+    // 高画質の警告
+    const hrCheckbox = document.getElementById("hr") as HTMLInputElement;
+    if(hrCheckbox){
+      hrCheckbox.addEventListener("change", () => {
+        if(hrCheckbox.checked) window.alert("高画質モードが選択されました。\r\n高画質モードでは、バッファリングが長くなったり、シークができなくなったりすることがあるため、高画質モードはおすすめしていません。続行しますか。");
+      });
+    }
     // パラメーター解析
     const searchParams = {} as {[key:string]:string};
     location.search
@@ -73,14 +80,16 @@
         bufElem.style.right = "0px";
         bufElem.style.zIndex = "999";
         bufElem.style.display = "none";
+        bufElem.textContent = "Buffered: -s";
         const button = document.createElement("button");
-        button.textContent = "バッファ情報表示切り替え";
+        button.textContent = "バッファ情報を表示";
         button.style.fontSize = "50%";
         document.getElementsByClassName("detailed_modal")[0].appendChild(button);
         button.addEventListener("click", () => {
           if(bufShow){
             clearInterval(interval);
             bufElem.style.display = "none";
+            button.textContent = "バッファ情報を隠す";
             bufShow = false;
           }else{
             // @ts-ignore
@@ -96,6 +105,7 @@
               }
             }, 1000);
             bufElem.style.display = "block";
+            button.textContent = "バッファ情報を表示";
             bufShow = true;
           }
         })
