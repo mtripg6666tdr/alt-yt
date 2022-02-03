@@ -78,14 +78,14 @@ class ParallelStreamManager extends EventEmitter {
             this.contentBuffer[this.piped].result
               .on("end", () => console.log("stream export end (normally) #" + this.piped))
               .on("end", () => pipeNext())
-              .pipe(res, {end: this.piped + 1 === this.totalChunks})
+              .pipe(res, {end: this.piped + 1 >= this.totalChunks})
           }else{
             this.contentBuffer[this.piped].on("finish", ()=>{
               console.log("stream should be ended after", this.piped, "?", this.piped + 1 === this.totalChunks);
               this.contentBuffer[this.piped].result
                 .on("end", () => console.log("stream export end (delayed) #" + this.piped))
                 .on("end", () => pipeNext())
-                .pipe(res, {end: this.piped + 1 === this.totalChunks})
+                .pipe(res, {end: this.piped + 1 >= this.totalChunks})
             })
           }
           this.beginRetriveNext();
@@ -93,7 +93,7 @@ class ParallelStreamManager extends EventEmitter {
         stream
           .on("end", () => console.log("stream export end #0"))
           .on("end", () => pipeNext())
-          .pipe(res, {end: false});
+          .pipe(res, {end: this.piped + 1 >= this.totalChunks});
         for(let i = 0; i < parallelCount - 1; i++)
           this.beginRetriveNext();
       })
