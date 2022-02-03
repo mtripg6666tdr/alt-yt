@@ -32,3 +32,8 @@ export function parseCookie(cookie:string){
   })
   return cookies;
 }
+export function insertAnchers(html:string){
+  return html.replace(/https?(:\/\/[\w\/:%#\$&@\?\(\)~\.=\+\-]+)/g, url => {
+    return `<a href="${url}" class="no_link" target="_blank" referrerpolicy="no-referrer">${url}</a>`;
+  });
+}
