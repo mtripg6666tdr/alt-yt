@@ -174,9 +174,16 @@ export async function handleFetch(req:Request, res:Response){
           ott: SessionManager.instance.createToken(key)
         }));
       }else{
-        const format = SID_CACHE[sid].format = ytdl.chooseFormat(info.formats, {
-          filter: info.formats.some(f => f.isDashMPD) ? f => f.isDashMPD : "videoandaudio", quality: "highest"
-        });
+        // format seletion
+        let format = null as ytdl.videoFormat;
+        if(info.formats.some(f => f.isDashMPD)){
+          format = SID_CACHE[sid].format = ytdl.chooseFormat(info.formats, {
+            filter: f => f.isDashMPD, quality: "highest"
+          });
+        }else{
+          const formats = ytdl.filterFormats(info.formats, "videoandaudio");
+          format = SID_CACHE[sid].format = formats.sort((a,b) => a.bitrate && b.bitrate ? b.bitrate - a.bitrate : 0)[0];
+        }
         if(format.isDashMPD){
           res.writeHead(200, {"Content-Type": "application/json; charset=UTF-8"});
           res.end(JSON.stringify({
