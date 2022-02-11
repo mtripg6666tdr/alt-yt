@@ -124,6 +124,7 @@ function generateHtml(template:string, info:ytdl.videoInfo, items:ytdl.relatedVi
     }
   })(info.videoDetails.author.subscriber_count);
   const result = template
+    .replace(/{sval}/, sval)
     .replace(/{title}/, info.videoDetails.title)
     .replace(/{channel_url}/, info.videoDetails.author.channel_url)
     .replace(/{channel_thumb}/, "proxy?url=" + encodeURIComponent(info.videoDetails.author.thumbnails[0].url) + "&sval=" + sval)

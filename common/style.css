@@ -237,7 +237,28 @@ div.player_container div.detailed_modal div.related div.search_card {
 }
 h1.small_title_h1 {
   margin-top: 0.3em;
+  margin-bottom: 0px;
+}
+form.small_search {
+  max-width: 860px;
+  width: calc(90vw - 40px);
+  margin: 0px auto;
   margin-bottom: 0.5em;
+}
+form.small_search input {
+  font-size: 80%;
+  background-color: #414141f0;
+  color: rgb(189, 189, 189);
+  width: 80%;
+}
+form.small_search input:focus-visible {
+  outline: 1px solid black;
+}
+form.small_search button {
+  font-size: 78%;
+  background-color: #00000000;
+  color: rgb(189, 189, 189);
+  width: 19%;
 }
 .video-js {
   width: 100%;

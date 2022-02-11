@@ -18,6 +18,11 @@
   <body>
     <div class="centering_content">
       <h1 class="small_title_h1"><a href="/" class="no_link s110p">Alt-YT</a></h1>
+      <form action="/search" method="GET" class="small_search">
+        <input type="text" name="q" size="50" placeholder="検索キーワードかURLを入力" autocomplete="off" required>
+        <button type="submit">検索</button>
+        <input type="hidden" name="sval" value="{sval}">
+      </form>
       <div class="player_container">
         <div class="player">
           <video class="video_player video-js" id="video_player" data-setup='{"controls":true,"autoplay":true}' controlsList="nodownload" oncontextmenu="return false;">
