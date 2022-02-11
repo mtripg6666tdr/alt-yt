@@ -1,7 +1,6 @@
-import { SHA256 } from "crypto-js";
 import * as ytdl from "ytdl-core";
 import * as ytsr from "ytsr";
-import { generateRandomNumber } from "./util";
+import { generateHash, generateRandomNumber } from "./util";
 
 type SessionData = {
   lastAccess:Date;
@@ -31,10 +30,10 @@ export class SessionManager {
   }
 
   register(){
-    const key = SHA256(generateRandomNumber().toString()).toString();
+    const key = generateHash(generateRandomNumber().toString());
     this.sessions[key] = {
       lastAccess: new Date(),
-      value: SHA256(generateRandomNumber().toString()).toString(),
+      value: generateHash(generateRandomNumber().toString()),
       token: [],
       watch: {},
       search: {},
@@ -69,7 +68,7 @@ export class SessionManager {
   createToken(key:string):string|null{
     const session = this.get(key);
     if(!session) return null;
-    const token = SHA256(generateRandomNumber().toString()).toString();
+    const token = generateHash(generateRandomNumber().toString());
     session.token.push(token);
     return token;
   }

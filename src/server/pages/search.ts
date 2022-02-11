@@ -3,8 +3,7 @@ import * as path from "path";
 import * as fs from "fs";
 import * as ytdl from "ytdl-core";
 import * as ytsr from "ytsr";
-import sha256 from 'crypto-js/sha256';
-import { parseCookie, respondError } from "../util";
+import { generateHash, parseCookie, respondError } from "../util";
 import { SessionManager } from "../session";
 
 const template = fs.readFileSync(path.join(__dirname, "../../common/search.html"), {encoding:"utf-8"});
@@ -34,7 +33,7 @@ export async function handleSearch(req:Request, res:Response){
         return;
       }
       SID_CACHE = session.search = {};
-      const hash = sha256(query).toString();
+      const hash = generateHash(query).toString();
       SID_CACHE[hash] = {
         search: ytsr.default(query, {gl: "JP", hl: "ja", limit: 30}).catch(e => e.toString()),
         query

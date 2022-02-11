@@ -1,13 +1,11 @@
 import * as fs from "fs";
 import * as path from "path";
-import { PassThrough } from "stream";
 import { http, https } from "follow-redirects";
 import { Request, Response } from "express";
-import { SHA256 } from "crypto-js";
 import { FFmpeg } from "prism-media";
 import LineTransformStream from "line-transform-stream";
 import * as ytdl from "ytdl-core";
-import { CalcHourMinSec, generateRandomNumber, insertAnchers, parseCookie, respondError, ytUserAgent } from "../util";
+import { CalcHourMinSec, generateHash, generateRandomNumber, insertAnchers, parseCookie, respondError, ytUserAgent } from "../util";
 import { SessionManager } from "../session";
 import { downloadParallel } from "../components/parallel-dl";
 
@@ -29,12 +27,12 @@ export async function handleWatch(req:Request, res:Response){
     }
     SessionManager.instance.revokeToken(key);
     if(vid){
-      const hash = SHA256(vid).toString();
+      const hash = generateHash(vid).toString();
       SID_CACHE[hash] = {
         vid,
         info: ytdl.getInfo(`https://www.youtube.com/watch?v=${vid}`, {
         }).catch(e => e.toString()),
-        key: SHA256(generateRandomNumber().toString()).toString(),
+        key: generateHash(generateRandomNumber().toString()),
         format: null,
         vformat: null,
       };
