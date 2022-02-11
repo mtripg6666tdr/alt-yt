@@ -2,6 +2,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { Response } from "express";
 import { SHA256 } from "crypto-js";
+import * as ytdl from "ytdl-core";
 
 export const errorTemplate = fs.readFileSync(path.join(__dirname, "../common/error.html"), {encoding:"utf-8"});
 
@@ -41,9 +42,10 @@ export function parseCookie(cookie:string){
   return cookies;
 }
 
-export function insertAnchers(html:string){
+export function insertAnchers(html:string, sval:string){
   return html.replace(/https?(:\/\/[\w\/:%#\$&@\?~\.=\+\-]+)/g, url => {
-    return `<a href="${url}" class="no_link" target="_blank" referrerpolicy="no-referrer">${url}</a>`;
+    const replace = ytdl.validateURL(url);
+    return `<a href="${replace ? `${ytdl.getURLVideoID(url)}&sval=${sval}` : url}" class="no_link" ${replace ? "" : `target="_blank" referrerpolicy="no-referrer"`}>${url}</a>`;
   });
 }
 
