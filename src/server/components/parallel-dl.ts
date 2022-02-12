@@ -145,7 +145,9 @@ class ParallelPartialStream extends EventEmitter {
     if(parentManager.totalLength !== -1 && begin + parentManager.totalLength < end) {
       end = -1;
       console.log("stream", "#" + current, "is the last stream, end was unset");
-    };
+    }else if(overallRangeEnd < end){
+      end = overallRangeEnd;
+    }
     httpLibs[url.protocol].request({
       ...destructURL(url),
       method: "GET",
