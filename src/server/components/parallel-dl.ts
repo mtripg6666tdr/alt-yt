@@ -78,15 +78,15 @@ class ParallelStreamManager extends EventEmitter {
             this.contentBuffer[this.piped].result
               .on("end", () => console.log("stream export end (normally) #" + this.piped))
               .on("end", () => pipeNext())
-              .pipe(res, {end: this.piped + 1 >= this.totalChunks})
+              .pipe(res, {end: this.piped + 1 >= this.totalChunks});
           }else{
             this.contentBuffer[this.piped].on("finish", ()=>{
               console.log("stream should be ended after", this.piped, "?", this.piped + 1 === this.totalChunks);
               this.contentBuffer[this.piped].result
                 .on("end", () => console.log("stream export end (delayed) #" + this.piped))
                 .on("end", () => pipeNext())
-                .pipe(res, {end: this.piped + 1 >= this.totalChunks})
-            })
+                .pipe(res, {end: this.piped + 1 >= this.totalChunks});
+            });
           }
           this.beginRetriveNext();
         };
@@ -216,6 +216,7 @@ class ParallelPartialStream extends EventEmitter {
     if(this.destroyed) return;
     this.buf = [];
     if(this.result) this.result.destroy();
+    this.result = null;
     this.parentManager.off("close", this.destroyListener);
     console.log("parallel fragment #", this.current, "was destroyed");
     this._destroyed = true;
