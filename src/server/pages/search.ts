@@ -3,7 +3,7 @@ import * as path from "path";
 import * as fs from "fs";
 import * as ytdl from "ytdl-core";
 import * as ytsr from "ytsr";
-import { generateHash, parseCookie, respondError } from "../util";
+import { generateHash, parseCookie, respondError, searchCardTemplate } from "../util";
 import { SessionManager } from "../session";
 
 const template = fs.readFileSync(path.join(__dirname, "../../common/search.html"), {encoding:"utf-8"});
@@ -64,28 +64,7 @@ export async function handleSearch(req:Request, res:Response){
 }
 
 function generateHtml(template:string, query:string, items:ytsr.Item[], hr:boolean, sval:string){
-  const cardHtml = `
-  <div class="search_card">
-    <a href="{url}">
-      <div class="search_thumb">
-        <img src="{thumb}">
-      </div>
-      <div class="search_detail">
-        <div class="search_title">
-          <p>{title}</p>
-        </div>
-        <div class="search_channel">
-          <p>
-            <img src="{channel_thumb}">
-            <span>{channel}</span>
-          </p>
-        </div>
-        <div class="search_description">
-          <p>{description}</p>
-        </div>
-      </div>
-    </a>
-  </div>`;
+  const cardHtml = searchCardTemplate;
   let cards = "";
   for(let i = 0; i < items.length; i++){
     const item = items[i] as ytsr.Video;

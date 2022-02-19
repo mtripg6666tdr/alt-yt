@@ -5,7 +5,7 @@ import { Request, Response } from "express";
 import { FFmpeg } from "prism-media";
 import LineTransformStream from "line-transform-stream";
 import * as ytdl from "ytdl-core";
-import { CalcHourMinSec, generateHash, generateRandomNumber, insertAnchers, parseCookie, respondError, ytUserAgent } from "../util";
+import { CalcHourMinSec, generateHash, generateRandomNumber, insertAnchers, parseCookie, respondError, searchCardTemplate, ytUserAgent } from "../util";
 import { SessionManager } from "../session";
 import { downloadParallel } from "../components/parallel-dl";
 
@@ -61,28 +61,7 @@ export async function handleWatch(req:Request, res:Response){
 }
 
 function generateHtml(template:string, info:ytdl.videoInfo, items:ytdl.relatedVideo[], hr:boolean, sval:string){
-  const cardHtml = `
-  <div class="search_card">
-    <a href="{url}">
-      <div class="search_thumb">
-        <img src="{thumb}">
-      </div>
-      <div class="search_detail">
-        <div class="search_title">
-          <p>{title}</p>
-        </div>
-        <div class="search_channel">
-          <p>
-            <img src="{channel_thumb}">
-            <span>{channel}</span>
-          </p>
-        </div>
-        <div class="search_description">
-          <p>{description}</p>
-        </div>
-      </div>
-    </a>
-  </div>`;
+  const cardHtml = searchCardTemplate;
   let cards = "";
   for(let i = 0; i < items.length; i++){
     const item = items[i];

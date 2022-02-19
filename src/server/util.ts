@@ -10,6 +10,29 @@ export const userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/
 
 export const ytUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.101 Safari/537.36";
 
+export const searchCardTemplate = 
+`<div class="search_card">
+  <a href="{url}">
+    <div class="search_thumb">
+      <img src="{thumb}">
+    </div>
+    <div class="search_detail">
+      <div class="search_title">
+        <p>{title}</p>
+      </div>
+      <div class="search_channel">
+        <p>
+          <img src="{channel_thumb}">
+          <span>{channel}</span>
+        </p>
+      </div>
+      <div class="search_description">
+        <p>{description}</p>
+      </div>
+    </div>
+  </a>
+</div>`;
+
 export function respondError(res:Response, message:string, status:number = 500){
   res.writeHead(status, {"Content-Type": "text/html; charset=UTF-8"});
   res.end(errorTemplate.replace(/{message}/, status + "<br>" + message));
