@@ -104,8 +104,8 @@ function generateHtml(template:string, sid:string, items:ytpl.Item[], from:numbe
     cardnum++;
   }
   const result = template
-    .replace(/{channel_banner}/, `<img src="${banner}" class="channel_banner">`)
-    .replace(/{channel_thumb}/, channel_thumb)
+    .replace(/{channel_banner}/, banner ? `<img src="/proxy?url=${encodeURIComponent(banner)}&sval=${sval}" class="channel_banner">` : "")
+    .replace(/{channel_thumb}/, `/proxy?url=${encodeURIComponent(channel_thumb)}&sval=${sval}`)
     .replace(/{channel}/, channel)
     .replace(/{sval}/, sval)
     .replace(/{pages}/, `<p>${from + 1}～${from + cardnum}件目を表示しています。</p>`)
