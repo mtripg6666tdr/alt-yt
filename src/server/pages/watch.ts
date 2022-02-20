@@ -105,8 +105,8 @@ function generateHtml(template:string, info:ytdl.videoInfo, items:ytdl.relatedVi
   const result = template
     .replace(/{sval}/, sval)
     .replace(/{title}/, info.videoDetails.title)
-    .replace(/{channel_url}/, info.videoDetails.author.channel_url)
-    .replace(/{channel_thumb}/, "proxy?url=" + encodeURIComponent(info.videoDetails.author.thumbnails[0].url) + "&sval=" + sval)
+    .replace(/{channel_url}/, `/channel?cid=${encodeURIComponent(info.videoDetails.author.channel_url)}&sval=${sval}`)
+    .replace(/{channel_thumb}/, "/proxy?url=" + encodeURIComponent(info.videoDetails.author.thumbnails[0].url) + "&sval=" + sval)
     .replace(/{channel}/, info.videoDetails.author.name)
     .replace(/{channel_subscribe}/, info.videoDetails.author.channel_url + "?sub_confirmation=1")
     .replace(/{channel_subscriber}/, subscriber)

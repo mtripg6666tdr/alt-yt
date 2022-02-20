@@ -76,10 +76,11 @@ function generateHtml(template:string, query:string, items:ytsr.Item[], hr:boole
     })();
     cards += cardHtml
       .replace(/{url}/, "/watch?v=" + item.id + "&sval=" + sval + (hr ? "&hr=on" : ""))
-      .replace(/{thumb}/, "proxy?url=" + encodeURIComponent(item.thumbnails[0].url) + "&sval=" + sval)
+      .replace(/{thumb}/, "/proxy?url=" + encodeURIComponent(item.thumbnails[0].url) + "&sval=" + sval)
       .replace(/{title}/, item.title)
-      .replace(/{channel_thumb}/, "proxy?url=" + encodeURIComponent(item.author.avatars[0].url) + "&sval=" + sval)
       .replace(/{channel}/, item.author.name)
+      .replace(/{channel_url}/, "/channel?cid=" + encodeURIComponent(item.author.url) + "&sval=" + sval)
+      .replace(/{channel_thumb}/, "/proxy?url=" + encodeURIComponent(item.author.avatars[0].url) + "&sval=" + sval)
       .replace(/{description}/, description.length > 200 ? description.substring(0, 200) : description)
     ;
   }

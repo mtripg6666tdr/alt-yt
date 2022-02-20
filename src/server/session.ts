@@ -1,6 +1,9 @@
-import * as ytdl from "ytdl-core";
-import * as ytsr from "ytsr";
+import type * as ytdl from "ytdl-core";
+import type * as ytsr from "ytsr";
+import type * as ytpl from "ytpl";
+
 import { generateHash, generateRandomNumber } from "./util";
+import { ytChannelAbout } from "./@types/yt-channel";
 
 type SessionData = {
   lastAccess:Date;
@@ -17,10 +20,25 @@ type SessionData = {
     vformat:ytdl.videoFormat;
     key:string;
   }};
+  channel:{[sid:string]:{
+    cid:string;
+    continuation:ytpl.Continuation;
+    items:ytpl.Item[];
+    channelUrl:string;
+    channel:ytChannelAbout;
+    channelName:string;
+    channelThumb:string;
+  }};
 };
 export class SessionManager {
   private constructor(){
-    //
+    setInterval(() => {
+      (Object.keys(this.sessions) as (keyof typeof this.sessions)[]).forEach(key => {
+        if(this.sessions[key].lastAccess.getTime() - Date.now() >= 10 * 60 * 1000){
+          delete this.sessions[key];
+        }
+      })
+    }, 5 * 60 * 1000);
   }
   private static _instance = null as SessionManager;
   private sessions = {} as {[key:string]:SessionData};
@@ -37,12 +55,13 @@ export class SessionManager {
       token: [],
       watch: {},
       search: {},
+      channel: {},
     };
     return key;
   }
   
   get(key:string):SessionData|undefined{
-    if(this.sessions[key].lastAccess.getTime() - Date.now() >= 1 * 60 * 60 * 1000){
+    if(this.sessions[key].lastAccess.getTime() - Date.now() >= 10 * 60 * 1000){
       delete this.sessions[key];
     }
     return this.sessions[key];

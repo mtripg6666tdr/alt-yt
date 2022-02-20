@@ -7,6 +7,7 @@ import { handleSearch } from "./pages/search";
 import { handleFetch, handlePlayback, handleWatch } from "./pages/watch";
 import { SessionManager } from "./session";
 import { handleAlive } from "./pages/alive";
+import { handleChannel } from "./pages/channel";
 
 export function createServer(){
   const app = express();
@@ -39,6 +40,7 @@ export function createServer(){
         next();
     })
     .get("/search", (req, res) => handleSearch(req, res))
+    .get("/channel", (req, res) => handleChannel(req, res))
     .get("/watch", (req, res) => handleWatch(req, res))
     .get("/video_fetch", (req, res) => handleFetch(req, res))
     .get("/video", (req, res) => handlePlayback(req, res))

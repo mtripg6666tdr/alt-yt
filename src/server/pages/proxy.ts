@@ -45,7 +45,8 @@ export function handleProxy(req:Request, res:Response){
         if(headers["set-cookie"]) delete headers["set-cookie"];
         if(headers["location"]) headers["Location"] = `/proxy/${Buffer.from(headers.location).toString("base64")}/sval/${sval}`;
         res.writeHead(reqres.statusCode, Object.assign({}, headers, {
-          "X-AYP": "1"
+          "X-AYP": "1",
+          "Cache-Control": "max-age=86400, private"
         }));
         reqres
           .on("error", () => res.end())

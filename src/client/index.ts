@@ -12,6 +12,13 @@
         return false;
       }
     });
+    [...document.getElementsByClassName("channel_a")].forEach((elem => {
+      elem.addEventListener("click", (e:MouseEvent) => {
+        e.preventDefault();
+        location.href = elem.dataset.url;
+        return false;
+      });
+    }) as ((elem:HTMLBodyElement)=>void) as any)
     // 高画質の警告
     const hrCheckbox = document.getElementById("hr") as HTMLInputElement;
     if(hrCheckbox){
@@ -148,7 +155,7 @@
             clearInterval(interval);
           }
         }).catch(()=>null);
-      }, 10 * 60 * 1000);
+      }, 5 * 60 * 1000);
     }
   });
 })();
