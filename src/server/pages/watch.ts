@@ -126,7 +126,8 @@ export async function handleFetch(req:Request, res:Response){
     const sval = req.query["sval"]?.toString();
     const session = key && SessionManager.instance.update(key);
     const SID_CACHE = session && session.watch;
-    if(!sval || !session || session.value !== sval){
+    const ref = req.headers.referer && SID_CACHE && sid && req.headers.referer.includes(`/watch?sid=${sid}&sval=${sval}`);
+    if(!sval || !session || session.value !== sval || !ref){
       respondError(res, "セッションが切れているか、URLが無効です。", 401);
       return;
     }

@@ -22,6 +22,7 @@ export async function handleChannel(req:Request, res:Response){
     return;
   }
   SessionManager.instance.revokeToken(key);
+  session.watch = {};
   if(channelId){
     SID_CACHE = session.channel = {};
     const hash = generateHash(channelId);

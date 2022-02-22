@@ -23,6 +23,7 @@ export async function handleSearch(req:Request, res:Response){
       return;
     }
     SessionManager.instance.revokeToken(key);
+    session.watch = {};
     if(query){
       if(ytdl.validateURL(query)){
         const id = ytdl.getURLVideoID(query);
