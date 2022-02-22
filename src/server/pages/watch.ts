@@ -83,7 +83,7 @@ function generateHtml(template:string, info:ytdl.videoInfo, items:ytdl.relatedVi
         return "長さ:" + duration + ", " + item.view_count + "回視聴" + (item.published ? ", " + item.published : "");
     })();
     cards += cardHtml
-      .replace(/{url}/, "/watch?v=" + item.id + "&sval=" + sval + (hr ? "&hr=on" : ""))
+      .replace(/{url}/g, "/watch?v=" + item.id + "&sval=" + sval + (hr ? "&hr=on" : ""))
       .replace(/{thumb}/, "proxy?url=" + encodeURIComponent(item.thumbnails[0].url) + "&sval=" + sval)
       .replace(/{title}/, item.title)
       .replace(/{channel_thumb}/, "proxy?url=" + encodeURIComponent(typeof item.author === "string" ? "" : item.author.thumbnails[0].url) + "&sval=" + sval)

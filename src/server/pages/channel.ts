@@ -95,7 +95,7 @@ function generateHtml(template:string, sid:string, items:ytpl.Item[], from:numbe
         return "長さ: " + item.duration;
     })();
     cards += cardHtml
-      .replace(/{url}/, "/watch?v=" + item.id + "&sval=" + sval)
+      .replace(/{url}/g, "/watch?v=" + item.id + "&sval=" + sval)
       .replace(/{thumb}/, "/proxy?url=" + encodeURIComponent(item.thumbnails[0].url) + "&sval=" + sval)
       .replace(/{title}/, item.title)
       .replace(/{channel_thumb}/, "/proxy?url=" + encodeURIComponent(channel_thumb) + "&sval=" + sval)

@@ -15,7 +15,10 @@ export function createServer(){
     .get("/style.css", (req, res) => {
       try{
         const style = fs.readFileSync(path.join(__dirname, "../common/style.css"), {encoding: "utf-8"});
-        res.writeHead(200, {"Content-Type": "text/css; charset=UTF-8"});
+        res.writeHead(200, {
+          "Content-Type": "text/css; charset=UTF-8",
+          "Cache-Control": "max-age=86400, private"
+        });
         res.end(style);
       }
       catch(e){
@@ -25,7 +28,10 @@ export function createServer(){
     .get("/common.js", (req, res) => {
       try{
         const script = fs.readFileSync(path.join(__dirname, "../common/common.js"), {encoding: "utf-8"});
-        res.writeHead(200, {"Content-Type": "text/javascript; charset=UTF-8"});
+        res.writeHead(200, {
+          "Content-Type": "text/javascript; charset=UTF-8",
+          "Cache-Control": "max-age=86400, private"
+        });
         res.end(script);
       }
       catch(e){

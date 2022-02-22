@@ -17,21 +17,28 @@ export const searchCardTemplate =
     <div class="search_thumb">
       <img src="{thumb}">
     </div>
+  </a>
     <div class="search_detail">
       <div class="search_title">
-        <p>{title}</p>
+        <a href="{url}">
+          <p>{title}</p>
+        </a>
       </div>
       <div class="search_channel">
-        <p>
-          <img src="{channel_thumb}" class="channel_a" data-url="{channel_url}">
-          <span>{channel}</span>
+        <a href="{channel_url}">
+          <p>
+            <img src="{channel_thumb}" class="channel_a">
+            <span>{channel}</span>
+          </p>
+        </a>
         </p>
       </div>
-      <div class="search_description">
-        <p>{description}</p>
-      </div>
+        <div class="search_description">
+          <a href="{url}">
+            <p>{description}</p>
+          </a>
+        </div>
     </div>
-  </a>
 </div>`;
 
 export function respondError(res:Response, message:string, status:number = 500){

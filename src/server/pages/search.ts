@@ -76,7 +76,7 @@ function generateHtml(template:string, query:string, items:ytsr.Item[], hr:boole
         return "長さ: " + item.duration + ", " + item.views + "回視聴" + (item.uploadedAt ? ", " + item.uploadedAt : "") + "<br>" + (item.description?.replace(/\r\n/g, "\r").replace(/\r/g, "\n").replace(/\n/g, " ") || "");
     })();
     cards += cardHtml
-      .replace(/{url}/, "/watch?v=" + item.id + "&sval=" + sval + (hr ? "&hr=on" : ""))
+      .replace(/{url}/g, "/watch?v=" + item.id + "&sval=" + sval + (hr ? "&hr=on" : ""))
       .replace(/{thumb}/, "/proxy?url=" + encodeURIComponent(item.thumbnails[0].url) + "&sval=" + sval)
       .replace(/{title}/, item.title)
       .replace(/{channel}/, item.author.name)

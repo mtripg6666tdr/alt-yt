@@ -44,6 +44,11 @@ div.search_result div.search_card {
   border: 1px solid white;
   border-radius: 5px;
   margin-bottom: 2px;
+  display: flex;
+}
+div.search_result div.search_card a {
+  color: white;
+  text-decoration: none;
 }
 @media screen and (max-width: 900px) {
   input[type="text"] {
@@ -59,20 +64,13 @@ div.search_result div.search_card {
 @media screen and (max-width: 500px) {
   div.search_result div.search_card {
     height: 40vh;
+    flex-direction: column;
   }
   div.search_result div.search_card div.search_thumb {
     height: 15vh;
     min-height: calc(120px - 1vh);
+    margin: 0px auto;
   }
-  div.search_result div.search_card a {
-    flex-direction: column;
-  }
-}
-div.search_result div.search_card a {
-  display: flex;
-  text-decoration: none;
-  color: white;
-  height: 100%;
 }
 div.search_result div.search_card div.search_thumb {
   aspect-ratio: 16/9;
@@ -90,7 +88,7 @@ div.search_result div.search_card div.search_thumb img {
 div.search_result div.search_card div.search_detail {
   width: 100%;
   text-align: left;
-  overflow: hidden;
+  overflow: auto;
 }
 div.search_result div.search_card div.search_detail div.search_title p {
   font-size: 110%;
@@ -296,16 +294,16 @@ div.channel_video_card div.search_card a {
   color: white;
   text-decoration: none;
 }
-div.channel_video_card div.search_card a div.search_thumb {
+div.channel_video_card div.search_card div.search_thumb {
   width: 100%;
 }
-div.channel_video_card div.search_card a div.search_thumb img {
+div.channel_video_card div.search_card div.search_thumb img {
   width: 100%;
 }
-div.channel_video_card div.search_card a div.search_detail p {
+div.channel_video_card div.search_card div.search_detail p {
   margin: 0px;
 }
-div.channel_video_card div.search_card a div.search_detail div.search_channel p img {
+div.channel_video_card div.search_card div.search_detail div.search_channel p img {
   width: 2em;
   vertical-align: middle;
   border-radius: 50%;
