@@ -50,7 +50,11 @@ export async function handleChannel(req:Request, res:Response){
         res.end();
         return;
       }
-      const result = await ytpl.default(SID_CACHE[sid].cid, {gl:"JP", hl:"ja", limit:30, pages:1});
+      const result = await ytpl.default(SID_CACHE[sid].cid, {gl:"JP", hl:"ja", limit:30, pages:1}).catch(() => null);
+      if(!result) {
+        respondError(res, `<a href="${SID_CACHE[sid].cid}" target="_blank" referrerpolicy="no-referrer" rel="noreferrer noopener">指定されたチャンネル</a>は見つかりませんでした。`, 404);
+        return;
+      }
       SID_CACHE[sid].continuation = result.continuation;
       SID_CACHE[sid].channelUrl = "https://www.youtube.com/channel/" + result.author.channelID;
       SID_CACHE[sid].channelName = result.author.name;

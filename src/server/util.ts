@@ -75,8 +75,14 @@ export function parseCookie(cookie:string){
 
 export function insertAnchers(html:string, sval:string){
   return html.replace(/https?(:\/\/[\w\/:%#\$&@\?~\.=\+\-]+)/g, url => {
-    const replace = ytdl.validateURL(url);
-    return `<a href="${replace ? `/watch?v=${ytdl.getURLVideoID(url)}&sval=${sval}` : url}" class="no_link" ${replace ? "" : `target="_blank" referrerpolicy="no-referrer" rel="noreferrer noopener"`}>${url}</a>`;
+    let result = url;
+    let match = null as RegExpMatchArray;
+    if(ytdl.validateURL(url)){
+      result = `/watch?v=${ytdl.getURLVideoID(url)}&sval=${sval}`;
+    }else if(match = url.match(/^https?:\/\/(www)?\.youtube\.com\/((channel|c|user)\/)?(?<id>[^/]+)$/)){
+      result = `/channel?cid=${encodeURIComponent("https://www.youtube.com/c/" + match.groups.id)}&sval=${sval}`;
+    }
+    return `<a href="${result}" class="no_link" ${result !== url ? "" : `target="_blank" referrerpolicy="no-referrer" rel="noreferrer noopener"`}>${url}</a>`;
   });
 }
 
