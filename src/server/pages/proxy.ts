@@ -2,7 +2,7 @@ import http from "http";
 import https from "https";
 import type { Request, Response } from "express";
 import { allowedDomains } from "../allowedDomain";
-import { parseCookie, respondError, userAgent } from "../util";
+import { base64url, parseCookie, respondError, userAgent } from "../util";
 import { SessionManager } from "../session";
 
 export function handleProxy(req:Request, res:Response){
@@ -11,7 +11,7 @@ export function handleProxy(req:Request, res:Response){
       if(req.query["url"]){
         return decodeURIComponent(req.query["url"].toString() || "")
       }else if(req.params["url"]){
-        return Buffer.from(req.params["url"], "base64").toString() + (req.path.length > 1 ? req.path.substring(1) : "");
+        return base64url.decode(req.params["url"]) + (req.path.length > 1 ? req.path.substring(1) : "");
       }else
         throw null;
     })();
@@ -43,7 +43,7 @@ export function handleProxy(req:Request, res:Response){
       }, (reqres) => {
         const headers = Object.assign({}, reqres.headers);
         if(headers["set-cookie"]) delete headers["set-cookie"];
-        if(headers["location"]) headers["Location"] = `/proxy/${Buffer.from(headers.location).toString("base64")}/sval/${sval}`;
+        if(headers["location"]) headers["Location"] = `/proxy/${base64url.encode(headers.location)}/sval/${sval}`;
         res.writeHead(reqres.statusCode, Object.assign({}, headers, {
           "X-AYP": "1",
           "Cache-Control": "max-age=86400, private"

@@ -12,6 +12,10 @@
         "<node_internals>/**"
       ],
       "program": "${workspaceFolder}\\dist\\index.js",
+      "outFiles": [
+        "${workspaceFolder}/dist/*.js",
+        "!**/node_modules/**"
+      ]
     }
   ]
 }

@@ -5,7 +5,7 @@ import { Request, Response } from "express";
 import { FFmpeg } from "prism-media";
 import LineTransformStream from "line-transform-stream";
 import * as ytdl from "ytdl-core";
-import { CalcHourMinSec, generateHash, generateRandomNumber, insertAnchers, parseCookie, respondError, searchCardTemplate, ytUserAgent } from "../util";
+import { base64url, CalcHourMinSec, generateHash, generateRandomNumber, insertAnchers, parseCookie, respondError, searchCardTemplate, ytUserAgent } from "../util";
 import { SessionManager } from "../session";
 import { downloadParallel } from "../components/parallel-dl";
 
@@ -238,7 +238,7 @@ export async function handlePlayback(req:Request, res:Response){
               res.writeHead(remoteRes.statusCode, headers);
               const filter = new LineTransformStream((text) => {
                 if(text.startsWith("https"))
-                  return `/proxy/${Buffer.from(text).toString("base64")}/sval/${sval}`;
+                  return `/proxy/${base64url.encode(text)}/sval/${sval}`;
                 else
                   return text;
               });
@@ -258,7 +258,7 @@ export async function handlePlayback(req:Request, res:Response){
                 .on("end", () => {
                   const mpd = Buffer.concat(chunks).toString("utf-8")
                     .replace(/<BaseURL>(.+?)<\/BaseURL>/g, baseUrl => {
-                      const encoded = Buffer.from(baseUrl.match(/<BaseURL>(?<url>.+?)<\/BaseURL>/).groups["url"]).toString("base64");
+                      const encoded = base64url.encode(baseUrl.match(/<BaseURL>(?<url>.+?)<\/BaseURL>/).groups["url"]);
                       return `<BaseURL>${new URL(req.headers.referer).origin}/proxy/${encoded}/sval/${sval}/</BaseURL>`
                     });
                   res.end(mpd);
