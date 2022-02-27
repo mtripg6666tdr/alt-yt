@@ -6,15 +6,17 @@
     <meta name="robots" content="noindex, nofollow">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' data: blob: https://cdn.jsdelivr.net" />
     <link rel="stylesheet" href="style.css">
+    <script defer="defer" src="common.js"></script>
     <title>Alt-YT</title>
   </head>
   <body>
     <div class="centering_content">
-      <p>正しくリクエストが送信されなかったか、リクエストが正しく処理されませんでした。</p>
-      <p>始めからやり直してみてください。</p>
-      <p>技術的な情報:</p>
-      <p>{message}</p>
-      <p><a href="/" class="no_link">トップに戻る</a></p>
+      <h1><a href="/" class="no_link">Alt-YT</a></h1>
+      <p class="no_margin">{revokeResult}</p>
+      <form action="/" method="POST">
+        <input type="password" name="key" placeholder="閲覧キーを入力">
+        <button type="submit">ログイン</button>
+      </form>
     </div>
   </body>
 </html>

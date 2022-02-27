@@ -223,6 +223,9 @@ div.player_container div.detailed_modal_bg.opened {
   transition: opacity 0.3s;
   pointer-events: all;
 }
+div.player_container div.detailed_modal p.d_content {
+  word-wrap: break-all;
+}
 div.player_container div.detailed_modal div.related div.search_result {
   width: 96%;
 }

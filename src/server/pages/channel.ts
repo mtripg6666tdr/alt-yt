@@ -112,7 +112,7 @@ function generateHtml(template:string, sid:string, items:ytpl.Item[], from:numbe
     .replace(/{channel_banner}/, banner ? `<img src="/proxy?url=${encodeURIComponent(banner)}&sval=${sval}" class="channel_banner">` : "")
     .replace(/{channel_thumb}/, `/proxy?url=${encodeURIComponent(channel_thumb)}&sval=${sval}`)
     .replace(/{channel}/, channel)
-    .replace(/{sval}/, sval)
+    .replace(/{sval}/g, sval)
     .replace(/{pages}/, `<p>${from + 1}～${from + cardnum}件目を表示しています。</p>`)
     .replace(/{channel_videos}/, cards)
     .replace(/{summary}/, (description || "").replace(/\r\n/g, "\r").replace(/\r/g, "\n").replace(/\n/g, "<br>"))

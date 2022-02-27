@@ -9,9 +9,13 @@ import { SessionManager } from "./session";
 import { handleAlive } from "./pages/alive";
 import { handleChannel } from "./pages/channel";
 
+const topPageTemplate = fs.readFileSync(path.join(__dirname, "../common/index.html"), {encoding:"utf-8"});
+const authPageTemplate = fs.readFileSync(path.join(__dirname, "../common/auth.html"), {encoding: "utf-8"});
+
 export function createServer(){
   const app = express();
   app
+    .use(express.urlencoded({extended:true}))
     .get("/style.css", (req, res) => {
       try{
         const style = fs.readFileSync(path.join(__dirname, "../common/style.css"), {encoding: "utf-8"});
@@ -52,24 +56,42 @@ export function createServer(){
     .get("/video", (req, res) => handlePlayback(req, res))
     .get("/alive", (req, res) => handleAlive(req, res))
     .use("/", (req, res) => {
-      if((req.url === "/" || req.url === "/index.html") && !req.headers["user-agent"].toLowerCase().includes("bot")){
-        try{
-          const html = fs.readFileSync(path.join(__dirname, "../common/index.html"), {encoding:"utf-8"});
+      if((req.url === "/" || req.url.startsWith("/?sval=")) && !req.headers["user-agent"].toLowerCase().includes("bot")){
+        const sval = req.query["sval"]?.toString();
+        const cookie = req.headers.cookie && parseCookie(req.headers.cookie);
+        const key = cookie && cookie.A_SID;      
+        if(sval && SessionManager.instance.update(key)){
+          try{
+            res.writeHead(200, {"Content-Type": "text/html; charset=UTF-8",});
+            res.end(topPageTemplate.replace(/{sval}/g, SessionManager.instance.get(key).value));
+          }
+          catch(e){
+            respondError(res, e.toString());
+          }
+        }else if(req.method.toLowerCase() === "post" && req.body.key === process.env.PW){
           const cookie = req.headers.cookie && parseCookie(req.headers.cookie);
           let ur = false;
           if(cookie && cookie.A_SID){
             ur = SessionManager.instance.unregister(cookie.A_SID);
           }
-          const key = SessionManager.instance.register();
-          res.writeHead(200, {
-            "Content-Type": "text/html; charset=UTF-8",
-            "Set-Cookie": `A_SID=${key}; HttpOnly`,
+          const session = SessionManager.instance.register();
+          res.writeHead(301, {
+            "Location": "/?sval=" + SessionManager.instance.get(session).value,
+            "Set-Cookie": `A_SID=${session}; HttpOnly`,
             "X-Revoked-Auth": +ur
           });
-          res.end(html.replace(/{sval}/, SessionManager.instance.get(key).value));
-        }
-        catch(e){
-          respondError(res, e.toString());
+          res.end();
+        }else{
+          const cookie = req.headers.cookie && parseCookie(req.headers.cookie);
+          let ur = false;
+          if(cookie && cookie.A_SID){
+            ur = SessionManager.instance.unregister(cookie.A_SID);
+          }
+          res.writeHead(200, {
+            "Content-Type": "text/html; charset=UTF-8",
+            "X-Revoked-Auth": +ur
+          });
+          res.end(authPageTemplate.replace(/{revokeResult}/, ur ? "✅セッションを終了しました" : ""));
         }
       }else{
         res.writeHead(404, {"Location": "/"});

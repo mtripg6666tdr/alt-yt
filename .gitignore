@@ -4,3 +4,4 @@ common/common.js
 common/common.js.map
 *.webm
 *.temp.*
+*.env
