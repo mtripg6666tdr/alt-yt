@@ -71,6 +71,7 @@ class ParallelStreamManager extends EventEmitter {
             return;
           }
           this.contentBuffer[this.piped - 1]?.destroy();
+          delete this.contentBuffer[this.piped - 1];
           console.log("pipe next #" + this.piped);
           console.log("next stream #" + this.piped + " has finished to be download?", this.contentBuffer[this.piped].isFinished);
           if(this.contentBuffer[this.piped].isFinished){
@@ -116,6 +117,9 @@ class ParallelStreamManager extends EventEmitter {
     if(this.destroyed) return;
     this.emit("close");
     this.res.end();
+    (Object.keys(this.contentBuffer)).forEach(key => {
+      this.contentBuffer[Number(key)]?.destroy();
+    })
     console.log("manager was destroyed");
     this._destroyed = true;
   }
@@ -181,9 +185,14 @@ class ParallelPartialStream extends EventEmitter {
       if(this.mode === "buffer"){
         reqres
           .on("data", chunk => this.buf.push(Buffer.from(chunk)))
-          .on("error", (er) => this.parentManager.emit("error", er))
+          .on("error", (er) => {
+            this.parentManager.emit("error", er);
+            reqres.destroy(er);
+          })
           .on("end", () => {
+            reqres.destroy();
             const resultbuf = Buffer.concat(this.buf);
+            this.buf = null;
             this.result = new PassThrough({
               highWaterMark: this.chunkLength
             });
@@ -198,9 +207,15 @@ class ParallelPartialStream extends EventEmitter {
           highWaterMark: this.chunkLength
         });
         reqres
-          .on("error", (er) => this.parentManager.emit("error", er))
+          .on("error", (er) => {
+            this.parentManager.emit("error", er);
+            reqres.destroy(er);
+          })
           .pipe(this.result)
-          .on("end", () => this.destroy());
+          .on("end", () => {
+            this.destroy();
+            reqres.destroy();
+          });
           ;
         this.isFinished = true;
         this.emit("finish", this.result, this.current);
@@ -214,7 +229,7 @@ class ParallelPartialStream extends EventEmitter {
 
   destroy(){
     if(this.destroyed) return;
-    this.buf = [];
+    this.buf = null;
     if(this.result) this.result.destroy();
     this.result = null;
     this.parentManager.off("close", this.destroyListener);
