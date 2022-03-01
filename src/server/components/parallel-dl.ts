@@ -184,13 +184,23 @@ class ParallelPartialStream extends EventEmitter {
       }
       if(this.mode === "buffer"){
         reqres
-          .on("data", chunk => this.buf.push(Buffer.from(chunk)))
+          .on("data", chunk => {
+            if(this.destroyed || this.buf === null){
+              reqres.destroy();
+              this.destroy();
+              return;
+            }
+            this.buf.push(Buffer.from(chunk))
+          })
           .on("error", (er) => {
             this.parentManager.emit("error", er);
             reqres.destroy(er);
           })
           .on("end", () => {
             reqres.destroy();
+            if(this.destroyed){
+              return;
+            }
             const resultbuf = Buffer.concat(this.buf);
             this.buf = null;
             this.result = new PassThrough({
