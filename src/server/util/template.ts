@@ -3,7 +3,7 @@ export const searchCardTemplate =
 <div class="search_card">
   <a href="{url}">
     <div class="search_thumb">
-      <img src="{thumb}">
+      <img src="{thumb}" loading="lazy">
     </div>
   </a>
     <div class="search_detail">
@@ -15,7 +15,7 @@ export const searchCardTemplate =
       <div class="search_channel">
         <a href="{channel_url}">
           <p>
-            <img src="{channel_thumb}" class="channel_a">
+            <img src="{channel_thumb}" class="channel_a" loading="lazy">
             <span>{channel}</span>
           </p>
         </a>
