@@ -61,6 +61,7 @@ export class SessionManager {
   }
   
   get(key:string):SessionData|undefined{
+    if(!this.sessions[key]) return undefined;
     if(this.sessions[key].lastAccess.getTime() - Date.now() >= 10 * 60 * 1000){
       delete this.sessions[key];
     }

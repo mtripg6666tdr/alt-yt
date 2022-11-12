@@ -177,7 +177,7 @@ div.player_container div.channel_info div div.right_container a button {
 }
 div.player_container div.detailed_button {
   position: fixed;
-  bottom: 0px;
+  top: calc(100vh - 1.5em);
   left: 10vw;
   width: 80vw;
   background-color: #cc006b;
@@ -185,26 +185,26 @@ div.player_container div.detailed_button {
   border-radius: 10px 10px 0px 0px;
   cursor: pointer;
   z-index: 3;
-  transition: bottom 0.3s;
+  transition: top 0.3s;
 }
 div.player_container div.detailed_button.opened {
-  bottom: 90vh;
-  transition: bottom 0.3s;
+  top: 10vh;
+  transition: top 0.3s;
 }
 div.player_container div.detailed_modal {
   position: fixed;
   left: 10vw;
   width: 80vw;
   height: 90vh;
-  bottom: -90vh;
+  top: calc(100vh + 1.5em);
   background-color: #333333;
   z-index: 3;
-  transition: bottom 0.3s;
+  transition: top 0.3s;
   overflow-y: scroll;
 }
 div.player_container div.detailed_modal.opened {
-  bottom: 0px;
-  transition: bottom 0.3s;
+  top: calc(10vh + 1.5em);
+  transition: top 0.3s;
 }
 div.player_container div.detailed_modal_bg {
   position: fixed;

@@ -60,7 +60,7 @@ export function createServer(){
         const sval = req.query["sval"]?.toString();
         const cookie = req.headers.cookie && parseCookie(req.headers.cookie);
         const key = cookie && cookie.A_SID;      
-        if(sval && SessionManager.instance.update(key)){
+        if(sval && SessionManager.instance.get(key)?.value === sval && SessionManager.instance.update(key)){
           try{
             res.writeHead(200, {"Content-Type": "text/html; charset=UTF-8",});
             res.end(topPageTemplate.replace(/{sval}/g, SessionManager.instance.get(key).value));
