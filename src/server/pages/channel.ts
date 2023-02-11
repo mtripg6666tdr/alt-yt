@@ -5,11 +5,12 @@ import * as ytpl from "ytpl";
 import * as miniget from "miniget";
 import { SessionManager } from "../session";
 import { generateHash, parseCookie, respondError, searchCardTemplate } from "../util";
+import { ytChannelAbout } from "../@types/yt-channel";
 
 const template = fs.readFileSync(path.join(__dirname, "../../common/channel.html"), {encoding:"utf-8"});
 
 export async function handleChannel(req:Request, res:Response){
-  const channelId = req.query["cid"]?.toString();
+  let channelId = req.query["cid"]?.toString();
   const sid = req.query["sid"]?.toString();
   const from = Number(req.query["from"]?.toString() || 0) || 0;
   const cookie = req.headers.cookie && parseCookie(req.headers.cookie);
@@ -24,6 +25,11 @@ export async function handleChannel(req:Request, res:Response){
   SessionManager.instance.revokeToken(key);
   session.watch = {};
   if(channelId){
+    let channel:ytChannelAbout = null;
+    if(channelId.match(/youtube\.com\/@[^/]+$/)){
+      channel = await getChannelInfoJSON(channelId);
+      channelId = `https://www.youtube.com/channel/${channel.header.c4TabbedHeaderRenderer.channelId}`;
+    }
     SID_CACHE = session.channel = {};
     const hash = generateHash(channelId);
     SID_CACHE[hash] = {
@@ -31,7 +37,7 @@ export async function handleChannel(req:Request, res:Response){
       continuation: null,
       items:[],
       channelUrl:null,
-      channel:null,
+      channel,
       channelName:null,
       channelThumb:null,
     };
@@ -59,9 +65,9 @@ export async function handleChannel(req:Request, res:Response){
       SID_CACHE[sid].channelUrl = "https://www.youtube.com/channel/" + result.author.channelID;
       SID_CACHE[sid].channelName = result.author.name;
       SID_CACHE[sid].channelThumb = result.author.bestAvatar.url;
-      const html = await miniget.default(SID_CACHE[sid].channelUrl + "/about").text();
-      const json = html.match(/<script nonce=".+?">var\s*ytInitialData\s*=\s*(?<json>\{.+?\});<\/script>/).groups?.json;
-      json && (SID_CACHE[sid].channel = JSON.parse(json));
+      if(!SID_CACHE[sid].channel){
+        SID_CACHE[sid].channel = await getChannelInfoJSON(SID_CACHE[sid].channelUrl)
+      }
       SID_CACHE[sid].items.push(...result.items);
     }else if(SID_CACHE[sid].continuation && from && SID_CACHE[sid].items.length < from + 20){
       const result = await ytpl.continueReq(SID_CACHE[sid].continuation);
@@ -78,11 +84,26 @@ export async function handleChannel(req:Request, res:Response){
     }
     const { items, channel, channelName, channelThumb, continuation} = SID_CACHE[sid];
     const subscriber = channel && channel.header.c4TabbedHeaderRenderer.subscriberCountText?.simpleText;
-    const views = channel && channel.contents.twoColumnBrowseResultsRenderer.tabs[5]?.tabRenderer?.content?.sectionListRenderer.contents[0]?.itemSectionRenderer.contents[0]?.channelAboutFullMetadataRenderer.viewCountText.simpleText;
-    const description = channel && channel.contents.twoColumnBrowseResultsRenderer.tabs[5]?.tabRenderer?.content?.sectionListRenderer.contents[0]?.itemSectionRenderer.contents[0]?.channelAboutFullMetadataRenderer.description.simpleText;
+    const views = channel && channel.contents?.twoColumnBrowseResultsRenderer.tabs[7]?.tabRenderer?.content?.sectionListRenderer?.contents[0]?.itemSectionRenderer?.contents[0]?.channelAboutFullMetadataRenderer?.viewCountText?.simpleText;
+    const description = channel && channel.contents?.twoColumnBrowseResultsRenderer.tabs[7]?.tabRenderer?.content?.sectionListRenderer?.contents[0]?.itemSectionRenderer?.contents[0]?.channelAboutFullMetadataRenderer?.description?.simpleText;
     const banner = channel && channel.header.c4TabbedHeaderRenderer.banner?.thumbnails[0]?.url;
     res.writeHead(200, {"Cotent-Type": "text/html; charset=UTF-8"});
     res.end(generateHtml(template, sid, items, from, channelName, channelThumb, subscriber, description, views, banner, sval, !!continuation || from + 20 < items.length));
+  }
+}
+
+async function getChannelInfoJSON(channelUrl:string):Promise<ytChannelAbout>{
+  const html = await miniget.default(channelUrl + "/about").text();
+  const json = html.match(/<script nonce=".+?">var\s*ytInitialData\s*=\s*(?<json>\{.+?\});<\/script>/).groups?.json;
+  if(json){
+    try{
+      return JSON.parse(json);
+    }
+    catch{
+      return null;
+    }
+  }else{
+    return null;
   }
 }
 
