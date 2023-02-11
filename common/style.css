@@ -178,6 +178,7 @@ div.player_container div.channel_info div div.right_container a button {
 div.player_container div.detailed_button {
   position: fixed;
   top: calc(100vh - 1.5em);
+  top: calc(100dvh - 1.5em);
   left: 10vw;
   width: 80vw;
   background-color: #cc006b;
@@ -189,6 +190,7 @@ div.player_container div.detailed_button {
 }
 div.player_container div.detailed_button.opened {
   top: 10vh;
+  top: 10dvh;
   transition: top 0.3s;
 }
 div.player_container div.detailed_modal {
@@ -197,6 +199,7 @@ div.player_container div.detailed_modal {
   width: 80vw;
   height: 90vh;
   top: calc(100vh + 1.5em);
+  top: calc(100dvh + 1.5em);
   background-color: #333333;
   z-index: 3;
   transition: top 0.3s;
@@ -204,6 +207,7 @@ div.player_container div.detailed_modal {
 }
 div.player_container div.detailed_modal.opened {
   top: calc(10vh + 1.5em);
+  top: calc(10dvh + 1.5em);
   transition: top 0.3s;
 }
 div.player_container div.detailed_modal_bg {

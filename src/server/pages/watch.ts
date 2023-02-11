@@ -1,5 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
+import { Readable, Writable, pipeline } from "stream";
+import * as zlib from "zlib";
 import { http, https } from "follow-redirects";
 import { Request, Response } from "express";
 import { FFmpeg } from "prism-media";
@@ -8,6 +10,7 @@ import * as ytdl from "ytdl-core";
 import { base64url, CalcHourMinSec, generateHash, generateRandomNumber, insertAnchers, parseCookie, respondError, searchCardTemplate, ytUserAgent } from "../util";
 import { SessionManager } from "../session";
 import { downloadParallel } from "../components/parallel-dl";
+import { enc } from "crypto-js";
 
 const tempalte = fs.readFileSync(path.join(__dirname, "../../common/watch.html"), {encoding:"utf-8"});
 
@@ -215,7 +218,9 @@ export async function handlePlayback(req:Request, res:Response){
         let headers = {} as {[key:string]:string};
         if(req.headers.range) headers["Range"] = req.headers.range;
         if(req.headers.accept) headers["Accept"] = req.headers.accept;
+        if(req.headers["accept-encoding"]) headers["Accept-Encoding"] = req.headers["accept-encoding"] as string;
         if(req.headers.connection) headers["Connection"] = req.headers.connection;
+        console.log(headers);
 
         if(isLive || format.isDashMPD){
           const url = new URL(format.url);
@@ -242,18 +247,48 @@ export async function handlePlayback(req:Request, res:Response){
                 else
                   return text;
               });
-              remoteRes
-                .on("error", () => [filter, res].forEach(s => s.destroy()))
-                .pipe(filter)
-                .pipe(res)
-                .on("error", () => [filter, remoteRes].forEach(s => s.destroy()))
-                .on("close", () => [filter, remoteRes].forEach(s => s.destroy()))
-              ;
+              const streams:(Readable|Writable)[] = [
+                remoteRes,
+              ];
+              const encodings = (remoteRes.headers["content-encoding"]?.split(",").map(d => d.trim()).reverse() || []);
+              encodings.forEach(encoding => {
+                if(encoding === "br"){
+                  streams.push(zlib.createBrotliDecompress());
+                }else if(encoding === "gzip"){
+                  streams.push(zlib.createGunzip());
+                }else if(encoding === "deflate"){
+                  streams.push(zlib.createInflate());
+                }
+              });
+              streams.push(filter);
+              encodings.reverse().forEach(encoding => {
+                if(encoding === "br"){
+                  streams.push(zlib.createBrotliCompress());
+                }else if(encoding === "gzip"){
+                  streams.push(zlib.createGzip());
+                }else if(encoding === "deflate"){
+                  streams.push(zlib.createDeflate());
+                }
+              });
+              streams.push(res);
+              pipeline(streams, console.error);
             }else if(format.isDashMPD){
               if(headers["content-length"]) delete headers["content-length"];
+              if(headers["content-encoding"]) delete headers["content-encoding"];
               headers["content-type"] = "application/dash+xml";
               const chunks = [] as Buffer[];
-              remoteRes
+              const decodeStreams:Readable[] = [remoteRes];
+              const encodings = (remoteRes.headers["content-encoding"]?.split(",").map(d => d.trim()).reverse() || []);
+              encodings.forEach(encoding => {
+                if(encoding === "br"){
+                  decodeStreams.push(zlib.createBrotliDecompress());
+                }else if(encoding === "gzip"){
+                  decodeStreams.push(zlib.createGunzip());
+                }else if(encoding === "deflate"){
+                  decodeStreams.push(zlib.createInflate());
+                }
+              });
+              pipeline(decodeStreams, () => {})
                 .on("data", (chunk) => chunks.push(Buffer.from(chunk)))
                 .on("end", () => {
                   const mpd = Buffer.concat(chunks).toString("utf-8")
@@ -263,7 +298,7 @@ export async function handlePlayback(req:Request, res:Response){
                     });
                   res.end(mpd);
                 })
-                .on("error", () => [remoteRes, res].forEach(s => s.destroy()))
+                .on("error", () => decodeStreams.forEach(s => s.destroy()))
                 ;
               res.writeHead(remoteRes.statusCode, headers);
             }
