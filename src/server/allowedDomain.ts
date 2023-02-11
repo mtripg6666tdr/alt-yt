@@ -4,4 +4,5 @@ export const allowedDomains = [
   "i\\.ytimg\\.com",
   "yt3\\.ggpht\\.com",
   "googlevideo\\.com",
+  "yt3\\.googleusercontent\\.com",
 ]
