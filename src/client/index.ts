@@ -92,6 +92,7 @@ type VideoFetchInfo = {
       const detailedButton = document.getElementsByClassName("detailed_button")[0];
       const detailedModal = document.getElementsByClassName("detailed_modal")[0];
       const detailedModalBg = document.getElementsByClassName("detailed_modal_bg")[0];
+      const controlsContainer = document.getElementById("v_controls")!;
       // get resolution setting from search param
       let currentResolution:Resolution = searchParams.resolution as Resolution;
       const localStorageResolutionKey = "_vid_resolution";
@@ -165,7 +166,7 @@ type VideoFetchInfo = {
         const button = document.createElement("button");
         button.textContent = "バッファ情報を表示";
         button.style.fontSize = "50%";
-        detailedModal.appendChild(button);
+        controlsContainer.appendChild(button);
         button.addEventListener("click", () => {
           if(bufShow){
             clearInterval(interval);
@@ -206,7 +207,7 @@ type VideoFetchInfo = {
         audioOption.textContent = "オーディオのみ";
         resolutionSelect.append(highOption, normalOption, audioOption);
         resolutionSelect.value = currentResolution;
-        detailedModal.appendChild(resolutionSelect);
+        controlsContainer.appendChild(resolutionSelect);
         resolutionSelect.addEventListener("change", () => {
           console.log(resolutionSelect.value);
           const newQuery = Object.assign(Object.create(null), searchParams);

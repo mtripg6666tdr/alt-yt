@@ -346,7 +346,24 @@ export async function handlePlayback(req:Request, res:Response){
           downloadParallel(format.url, headers, 512 * 1024, res);
         }
       }else if(type === "video" && vformat){
-        downloadParallel(vformat.url, headers, 512 * 1024, res);
+        const url = new URL(vformat.url);
+        ({"http:": http, "https:": https})[url.protocol].request(url, {
+          headers: {
+            "User-Agent": ytUserAgent,
+            ...headers
+          },
+        }, remoteRes => {
+          const headers = Object.assign({}, remoteRes.headers);
+          if(headers["set-cookie"]) delete headers["set-cookie"];
+          res.writeHead(remoteRes.statusCode, headers);
+          remoteRes.pipe(res);
+        })
+          .on("error", (e) => {
+            console.log(e);
+            res.end();
+          })
+          .end()
+        ;
       }else if(type === "audio" && aformat){
         const url = new URL(aformat.url);
         ({"http:": http, "https:": https})[url.protocol].request(url, {
