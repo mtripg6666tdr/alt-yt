@@ -242,12 +242,10 @@ export async function handlePlayback(req:Request, res:Response){
     const sval = req.query["sval"]?.toString();
     const session = skey && SessionManager.instance.update(skey);
     const SID_CACHE = session && session.watch;
-    // if(!sval || !session || session.value !== sval || !SessionManager.instance.validateToken(skey, ott)){
-    //   respondError(res, "セッションが切れているか、URLが無効です。", 401);
-    //   return;
-    // }
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Access-Control-Allow-Credentials", "true");
+    if(!sval || !session || session.value !== sval || !SessionManager.instance.validateToken(skey, ott)){
+      respondError(res, "セッションが切れているか、URLが無効です。", 401);
+      return;
+    }
     if(sid && SID_CACHE[sid] && key && SID_CACHE[sid].key === key){
       const { info:pinfo, format, vformat, aformat } = SID_CACHE[sid];
       if(!req.headers.referer || !req.headers.referer.includes("sid=" + sid) || !req.headers.referer.includes("/watch")){
