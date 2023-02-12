@@ -18,6 +18,7 @@ type SessionData = {
     info:Promise<ytdl.videoInfo>;
     format:ytdl.videoFormat;
     vformat:ytdl.videoFormat;
+    aformat:ytdl.videoFormat;
     key:string;
   }};
   channel:{[sid:string]:{
@@ -53,9 +54,9 @@ export class SessionManager {
       lastAccess: new Date(),
       value: generateHash(generateRandomNumber().toString()),
       token: [],
-      watch: {},
-      search: {},
-      channel: {},
+      watch: Object.create(null),
+      search: Object.create(null),
+      channel: Object.create(null),
     };
     return key;
   }
@@ -85,7 +86,7 @@ export class SessionManager {
     return this.sessions[key];
   }
 
-  createToken(key:string):string|null{
+  createTokenFor(key:string):string|null{
     const session = this.get(key);
     if(!session) return null;
     const token = generateHash(generateRandomNumber().toString());

@@ -1,4 +1,58 @@
+type Resolution = "high"|"normal"|"audio";
+type VideoFetchInfo = {
+  key: string,
+  format: string,
+  vcodec?:string,
+  acodec?:string,
+  vbitrate?:string,
+  abitrate?:string,
+  vlength?:string,
+  alength?:string,
+  vindexrange?:string,
+  vinitrange?:string,
+  aindexrange?:string,
+  ainitrange?:string,
+  ott: string,
+  mode: "default"|"diy",
+  length?:number,
+}
+
 (function(){
+  const mpdTemplate = `
+  <?xml version="1.0" encoding="UTF-8"?>
+  <MPD xmlns="urn:mpeg:dash:schema:mpd:2011"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="urn:mpeg:dash:schema:mpd:2011 https://raw.githubusercontent.com/Dash-Industry-Forum/MPEG-Conformance-and-reference-source/master/conformance/MPDValidator/schemas/DASH-MPD.xsd"
+    mediaPresentationDuration="PT$LENGTHS"
+    minBufferTime="PT8.34S"
+    type="static"
+    profiles="urn:mpeg:dash:profile:isoff-on-demand:2011">
+    <Period>
+      <AdaptationSet
+        mimeType="video/webm"
+        segmentAlignment="true"
+        startWithSAP="1">
+        <Representation id="video/main" bandwidth="$VBITRATE" codecs="$VCODEC">
+          <BaseURL>$VIDEO</BaseURL>
+          <SegmentBase indexRange="$VINDEXRANGE">
+            <Initialization range="$VINITRANGE" />
+          </SegmentBase>
+        </Representation>
+      </AdaptationSet>
+      <AdaptationSet
+        mimeType="audio/webm"
+        segmentAlignment="true"
+        startWithSAP="1">
+        <Representation id="audio/main" bandwidth="$ABITRATE" codecs="$ACODEC">
+          <BaseURL>$AUDIO</BaseURL>
+          <SegmentBase indexRange="$AINDEXRANGE">
+            <Initialization range="$AINITRANGE" />
+          </SegmentBase>
+        </Representation>
+      </AdaptationSet>
+    </Period>
+  </MPD>
+  `
   window.addEventListener("load", () => {
     // 二重送信防止
     const inputs = [...document.getElementsByTagName("button")];
@@ -15,7 +69,7 @@
     [...document.getElementsByClassName("channel_a")].forEach((elem => {
       elem.addEventListener("click", (e:MouseEvent) => {
         e.preventDefault();
-        location.href = elem.dataset.url;
+        window.location.href = elem.dataset.url!;
         return false;
       });
     }) as ((elem:HTMLBodyElement)=>void) as any)
@@ -27,21 +81,34 @@
       });
     }
     // パラメーター解析
-    const searchParams = {} as {[key:string]:string};
-    location.search
+    const searchParams = Object.create(null) as {[key:string]:string};
+    window.location.search
       .substring(1)
       .split("&")
       .map(p => p.split("=").map(t => decodeURIComponent(t)))
       .forEach(q => searchParams[q[0]] = q[1]);
     // 再生ページの処理
-    if(location.pathname.startsWith("/watch") || location.pathname.startsWith("/common/watch")){
+    if(window.location.pathname.startsWith("/watch") || window.location.pathname.startsWith("/common/watch")){
       const detailedButton = document.getElementsByClassName("detailed_button")[0];
       const detailedModal = document.getElementsByClassName("detailed_modal")[0];
       const detailedModalBg = document.getElementsByClassName("detailed_modal_bg")[0];
+      // get resolution setting from search param
+      let currentResolution:Resolution = searchParams.resolution as Resolution;
+      const localStorageResolutionKey = "_vid_resolution";
+      // if not defined, then try to get it from the local storage
+      if(!currentResolution){
+        currentResolution = window.localStorage.getItem(localStorageResolutionKey) as Resolution;
+      }
+      // fallback to the default value.
+      if(!["high", "normal", "audio"].includes(currentResolution)){
+        currentResolution = "normal";
+      }
+      window.localStorage.setItem(localStorageResolutionKey, currentResolution);
       const initPlayer = (src:string, format:string, length:number = 0) => {
         if(!videojs) return;
         // @ts-ignore
         const videoPlayer = videojs("video_player") as videojs.VideoJsPlayer;
+        // ループボタンのセットアップ
         const loopButton = videoPlayer.controlBar.addChild("button");
         const loopButtonElem = loopButton.el() as HTMLElement;
         const loopIcon = document.createElement("span");
@@ -51,11 +118,18 @@
         loopButtonElem.style.cursor = "pointer";
         loopButtonElem.style.flex = "none";
         loopButtonElem.appendChild(loopIcon);
+        const localStorageLoopKey = "_vid_loop";
         loopButton.on("click", () => {
           const old = videoPlayer.loop();
           videoPlayer.loop(!old);
           loopIcon.classList[old ? "remove" : "add"]("loop_enable");
+          window.localStorage.setItem(localStorageLoopKey, old ? "off" : "on");
         });
+        const loopEnabledBefore = window.localStorage.getItem(localStorageLoopKey) === "on";
+        if(loopEnabledBefore){
+          loopButtonElem.click();
+        }
+        // 再生準備
         videoPlayer.src({src, type: format});
         videoPlayer.one("play", () => {
           if(length > 0){
@@ -75,7 +149,7 @@
             videoPlayer.userActive(true);
           }
         });
-        document.getElementById("video_player").appendChild(videoCover);
+        document.getElementById("video_player")!.appendChild(videoCover);
         // バッファ情報表示
         const rawVideoPlayer = document.getElementsByTagName("video")[0];
         let bufShow = false;
@@ -91,7 +165,7 @@
         const button = document.createElement("button");
         button.textContent = "バッファ情報を表示";
         button.style.fontSize = "50%";
-        document.getElementsByClassName("detailed_modal")[0].appendChild(button);
+        detailedModal.appendChild(button);
         button.addEventListener("click", () => {
           if(bufShow){
             clearInterval(interval);
@@ -115,7 +189,31 @@
             button.textContent = "バッファ情報を隠す";
             bufShow = true;
           }
-        })
+        });
+        // 画質切り替え
+        const resolutionSelect = document.createElement("select");
+        const highOption = document.createElement("option");
+        highOption.value = "high";
+        highOption.textContent = "高画質";
+        if("MediaSource" in window && (!window.MediaSource.isTypeSupported("video/webm; codecs=vp9") || !window.MediaSource.isTypeSupported("video/webm; codecs=opus"))){
+          highOption.disabled = true;
+        }
+        const normalOption = document.createElement("option");
+        normalOption.value = "normal";
+        normalOption.textContent = "通常";
+        const audioOption = document.createElement("option");
+        audioOption.value = "audio";
+        audioOption.textContent = "オーディオのみ";
+        resolutionSelect.append(highOption, normalOption, audioOption);
+        resolutionSelect.value = currentResolution;
+        detailedModal.appendChild(resolutionSelect);
+        resolutionSelect.addEventListener("change", () => {
+          console.log(resolutionSelect.value);
+          const newQuery = Object.assign(Object.create(null), searchParams);
+          newQuery.resolution = resolutionSelect.value;
+          const queryString = Object.keys(newQuery).map(key => `${key}=${encodeURIComponent(newQuery[key])}`).join("&");
+          window.location.search = "?" + queryString;
+        });
       };
       let detailedOpened = false;
       if(detailedButton){
@@ -132,17 +230,39 @@
           });
         });
       }
-      if(location.search.length > 0){
-        window.fetch(`/video_fetch?sid=${searchParams.sid}` + "&sval=" + searchParams.sval + (searchParams.hr === "on" ? "&hr=on" : ""))
+      if(window.location.search.length > 0){
+        window.fetch(`/video_fetch?sid=${searchParams.sid}&sval=${searchParams.sval}&resolution=${currentResolution}`)
         .then(res => { 
           if(res.status !== 200){
             throw "動画の取得中に問題が発生しました: " + res.status
           }
           return res.json();
         })
-        .then(json => {
-          const playbackUrl = `/video?sid=${searchParams.sid}&key=${json.key}&sval=${searchParams.sval}&&ott=${json.ott}` + (searchParams.hr === "on" ? "&hr=on" : "");
-          initPlayer(playbackUrl, json.format, json.length);
+        .then((json:VideoFetchInfo) => {
+          if(json.mode === "default"){
+            const playbackUrl = `/video?sid=${searchParams.sid}&key=${json.key}&sval=${searchParams.sval}&ott=${json.ott}&type=${currentResolution}`;
+            initPlayer(playbackUrl, json.format, json.length);
+          }else{
+            const playbackUrlBase = `${window.location.origin}/video?sid=${searchParams.sid}&amp;key=${json.key}&amp;sval=${searchParams.sval}&amp;ott=${json.ott}&amp;type=`;
+            const mpdManifest = mpdTemplate
+              .replace(/\$BASE/, playbackUrlBase)
+              .replace(/\$VBITRATE/, json.vbitrate!)
+              .replace(/\$VCODEC/, json.vcodec!)
+              .replace(/\$ABITRATE/, json.abitrate!)
+              .replace(/\$ACODEC/, json.acodec!)
+              .replace(/\$LENGTH/, json.length!.toString())
+              .replace(/\$VIDEO/, playbackUrlBase + "video")
+              .replace(/\$AUDIO/, playbackUrlBase + "audio")
+              .replace(/\$VLENGTH/, json.vlength!)
+              .replace(/\$ALENGTH/, json.alength!)
+              .replace(/\$VINDEXRANGE/, json.vindexrange!)
+              .replace(/\$VINITRANGE/, json.vinitrange!)
+              .replace(/\$AINDEXRANGE/, json.aindexrange!)
+              .replace(/\$AINITRANGE/, json.ainitrange!)
+              .trim()
+            ;
+            initPlayer(URL.createObjectURL(new Blob([mpdManifest], {type: json.format})), json.format, json.length);
+          }
         })
         .catch(e => {
           window.alert("エラーが発生しました: " + e);

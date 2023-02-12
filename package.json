@@ -10,8 +10,8 @@
     "build": "tsc && webpack",
     "build:debug": "tsc --sourceMap && webpack --config webpack.config.dev.js",
     "watch:server": "tsc --sourceMap --watch",
-    "watch:client": "webpack --config webpack.config.dev.js",
-    "watch:start": "nodemon dist",
+    "watch:client": "webpack --config webpack.config.dev.js --watch",
+    "watch:start": "nodemon --watch dist --watch common dist",
     "watch": "run-p watch:server watch:client watch:start"
   },
   "keywords": [],

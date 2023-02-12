@@ -32,14 +32,6 @@ export function downloadParallel(url:string, additionalHeaders:{[key:string]:str
   new ParallelStreamManager(res, url, 3, goalRange.from, goalRange.to, additionalHeaders, chunkLength);
 }
 
-function destructURL(url:URL){
-  return {
-    protocol: url.protocol,
-    host: url.host,
-    path: url.pathname + url.search + url.hash
-  };
-}
-
 class ParallelStreamManager extends EventEmitter {
   readonly urlObj:URL;
   readonly contentBuffer:{[key:number]:ParallelPartialStream} = {};
@@ -152,8 +144,7 @@ class ParallelPartialStream extends EventEmitter {
     }else if(overallRangeEnd < end){
       end = overallRangeEnd;
     }
-    httpLibs[url.protocol].request({
-      ...destructURL(url),
+    httpLibs[url.protocol].request(url, {
       method: "GET",
       headers: {
         ...additinalHeaders,

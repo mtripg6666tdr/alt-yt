@@ -5,3 +5,4 @@ common/common.js.map
 *.webm
 *.temp.*
 *.env
+mpd-test

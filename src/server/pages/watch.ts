@@ -38,6 +38,7 @@ export async function handleWatch(req:Request, res:Response){
         key: generateHash(generateRandomNumber().toString()),
         format: null,
         vformat: null,
+        aformat: null,
       };
       res.writeHead(301, {
         "Location": "/watch?sid=" + hash + "&sval=" + sval + (hr ? "&hr=on" : ""),
@@ -123,7 +124,7 @@ function generateHtml(template:string, info:ytdl.videoInfo, items:ytdl.relatedVi
 export async function handleFetch(req:Request, res:Response){
   try{
     const sid = req.query["sid"]?.toString();
-    const hr = req.query["hr"]?.toString() === "on";
+    const resolution = req.query["resolution"]?.toString();
     const cookie = req.headers.cookie && parseCookie(req.headers.cookie);
     const key = cookie && cookie.A_SID;
     const sval = req.query["sval"]?.toString();
@@ -136,31 +137,68 @@ export async function handleFetch(req:Request, res:Response){
     }
     if(sid && SID_CACHE[sid]){
       const info = await SID_CACHE[sid].info;
-      if(hr){
-        const vformat = SID_CACHE[sid].vformat = ytdl.chooseFormat(info.formats.filter(f => f.container === "webm"), {
-          filter: "video", quality: "highestvideo"
-        });
-        res.writeHead(200, {"Content-Type": "application/json; charset=UTF-8"});
-        res.end(JSON.stringify({
-          key: SID_CACHE[sid].key,
-          format: `video/${vformat.container}`,
-          length: Number(info.videoDetails.lengthSeconds),
-          ott: SessionManager.instance.createToken(key)
-        }));
-      }else if(info.videoDetails.liveBroadcastDetails && info.videoDetails.liveBroadcastDetails.isLiveNow){
+      if(info.videoDetails.liveBroadcastDetails && info.videoDetails.liveBroadcastDetails.isLiveNow){
         SID_CACHE[sid].format = ytdl.chooseFormat(info.formats, {isHLS:true} as ytdl.chooseFormatOptions);
         res.writeHead(200, {"Content-Type": "application/json; charset=UTF-8"});
         res.end(JSON.stringify({
           key: SID_CACHE[sid].key,
           format: `application/x-mpegURL`,
-          ott: SessionManager.instance.createToken(key)
+          ott: SessionManager.instance.createTokenFor(key),
+          mode: "default",
+        }));
+      }else if(resolution === "high"){
+        const videoFormat = ytdl.chooseFormat(info.formats, {
+          filter: f => f.hasVideo && !f.hasAudio && f.container === "webm",
+          quality: "highest",
+        });
+        const audioFormat = ytdl.chooseFormat(info.formats, {
+          filter : f => !f.hasVideo && f.hasAudio && f.container === "webm",
+        });
+        if(!videoFormat || !audioFormat){
+          respondError(res, "指定された画質で再生できない動画です。", 400);
+          return;
+        }
+        SID_CACHE[sid].vformat = videoFormat;
+        SID_CACHE[sid].aformat = audioFormat;
+        res.writeHead(200, {"Content-Type": "application/json; charset=UTF-8"});
+        res.end(JSON.stringify({
+          key: SID_CACHE[sid].key,
+          format: "application/dash+xml",
+          ott: SessionManager.instance.createTokenFor(key),
+          mode: "diy",
+          length: Number(info.videoDetails.lengthSeconds) || undefined,
+          vcodec: videoFormat.videoCodec,
+          acodec: audioFormat.audioCodec,
+          vbitrate: videoFormat.bitrate,
+          abitrate: audioFormat.bitrate,
+          vlength: videoFormat.contentLength,
+          alength: audioFormat.contentLength,
+          vindexrange: `${videoFormat.indexRange.start}-${videoFormat.indexRange.end}`,
+          aindexrange: `${audioFormat.indexRange.start}-${audioFormat.indexRange.end}`,
+          vinitrange: `${videoFormat.initRange.start}-${videoFormat.initRange.end}`,
+          ainitrange: `${audioFormat.initRange.start}-${audioFormat.initRange.end}`,
+        }));
+      }else if(resolution === "audio"){
+        const audioFormat = ytdl.chooseFormat(info.formats, {
+          filter: "audioonly",
+          quality: "highest",
+        });
+        SID_CACHE[sid].aformat = audioFormat;
+        res.writeHead(200, {"Content-Type": "application/json; charset=UTF-8"});
+        res.end(JSON.stringify({
+          key: SID_CACHE[sid].key,
+          format: audioFormat.mimeType,
+          ott: SessionManager.instance.createTokenFor(key),
+          mode: "default",
+          length: Number(info.videoDetails.lengthSeconds) || undefined,
         }));
       }else{
         // format seletion
         let format = null as ytdl.videoFormat;
         if(info.formats.some(f => f.isDashMPD)){
           format = SID_CACHE[sid].format = ytdl.chooseFormat(info.formats, {
-            filter: f => f.isDashMPD, quality: "highest"
+            filter: f => f.isDashMPD, 
+            quality: "highest"
           });
         }else{
           const formats = ytdl.filterFormats(info.formats, "videoandaudio");
@@ -171,14 +209,16 @@ export async function handleFetch(req:Request, res:Response){
           res.end(JSON.stringify({
             key: SID_CACHE[sid].key,
             format: `application/dash+xml`,
-            ott: SessionManager.instance.createToken(key)
+            ott: SessionManager.instance.createTokenFor(key),
+            mode: "default",
           }))
         }else{
           res.writeHead(200, {"Content-Type": "application/json; charset=UTF-8"});
           res.end(JSON.stringify({
             key: SID_CACHE[sid].key,
-            format: `video/${format.container}`,
-            ott: SessionManager.instance.createToken(key)
+            format: format.mimeType,
+            ott: SessionManager.instance.createTokenFor(key),
+            mode: "default",
           }));
         }
       }
@@ -195,40 +235,37 @@ export async function handlePlayback(req:Request, res:Response){
   try{
     const sid = req.query["sid"]?.toString();
     const key = req.query["key"]?.toString();
-    const hr = req.query["hr"]?.toString() === "on";
+    const type = req.query["type"]?.toString();
     const ott = req.query["ott"]?.toString();
     const cookie = req.headers.cookie && parseCookie(req.headers.cookie);
     const skey = cookie && cookie.A_SID;
     const sval = req.query["sval"]?.toString();
     const session = skey && SessionManager.instance.update(skey);
     const SID_CACHE = session && session.watch;
-    if(!sval || !session || session.value !== sval || !SessionManager.instance.validateToken(skey, ott)){
-      respondError(res, "セッションが切れているか、URLが無効です。", 401);
-      return;
-    }
+    // if(!sval || !session || session.value !== sval || !SessionManager.instance.validateToken(skey, ott)){
+    //   respondError(res, "セッションが切れているか、URLが無効です。", 401);
+    //   return;
+    // }
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Credentials", "true");
     if(sid && SID_CACHE[sid] && key && SID_CACHE[sid].key === key){
-      const { info:pinfo, format, vformat } = SID_CACHE[sid];
+      const { info:pinfo, format, vformat, aformat } = SID_CACHE[sid];
       if(!req.headers.referer || !req.headers.referer.includes("sid=" + sid) || !req.headers.referer.includes("/watch")){
         respondError(res, "不正なアクセスです", 403);
         return;
       }
       const info = await pinfo;
-      if(!hr){
-        const isLive = info.videoDetails.liveBroadcastDetails && info.videoDetails.liveBroadcastDetails.isLiveNow;
-        let headers = {} as {[key:string]:string};
-        if(req.headers.range) headers["Range"] = req.headers.range;
-        if(req.headers.accept) headers["Accept"] = req.headers.accept;
-        if(req.headers["accept-encoding"]) headers["Accept-Encoding"] = req.headers["accept-encoding"] as string;
-        if(req.headers.connection) headers["Connection"] = req.headers.connection;
-        console.log(headers);
+      let headers = {} as {[key:string]:string};
+      if(req.headers.range) headers["Range"] = req.headers.range;
+      if(req.headers.accept) headers["Accept"] = req.headers.accept;
+      if(req.headers["accept-encoding"]) headers["Accept-Encoding"] = req.headers["accept-encoding"] as string;
+      if(req.headers.connection) headers["Connection"] = req.headers.connection;
+      if(!type || type === "normal" || info.videoDetails.liveBroadcastDetails?.isLiveNow){
+        const isLive = info.videoDetails.liveBroadcastDetails?.isLiveNow;
 
         if(isLive || format.isDashMPD){
           const url = new URL(format.url);
-          ({"http:": http, "https:": https})[url.protocol].request({
-            protocol: url.protocol,
-            host: url.host,
-            path: url.pathname + url.search + url.hash,
-            method: "GET",
+          ({"http:": http, "https:": https})[url.protocol].request(url, {
             headers: {
               "User-Agent": ytUserAgent,
               ...headers
@@ -310,35 +347,29 @@ export async function handlePlayback(req:Request, res:Response){
         }else{
           downloadParallel(format.url, headers, 512 * 1024, res);
         }
+      }else if(type === "video" && vformat){
+        downloadParallel(vformat.url, headers, 512 * 1024, res);
+      }else if(type === "audio" && aformat){
+        const url = new URL(aformat.url);
+        ({"http:": http, "https:": https})[url.protocol].request(url, {
+          headers: {
+            "User-Agent": ytUserAgent,
+            ...headers
+          },
+        }, remoteRes => {
+          const headers = Object.assign({}, remoteRes.headers);
+          if(headers["set-cookie"]) delete headers["set-cookie"];
+          res.writeHead(remoteRes.statusCode, headers);
+          remoteRes.pipe(res);
+        })
+          .on("error", (e) => {
+            console.log(e);
+            res.end();
+          })
+          .end()
+        ;
       }else{
-        const aformat = ytdl.chooseFormat(info.formats, {
-          filter: "audio", quality: "highestaudio"
-        });
-        const ffmpeg = new FFmpeg({args: [
-          '-reconnect', '1', 
-          '-reconnect_streamed', '1', 
-          '-reconnect_on_network_error', '1', 
-          '-reconnect_on_http_error', '4xx,5xx', 
-          '-reconnect_delay_max', '30', 
-          '-analyzeduration', '0', 
-          '-loglevel', '0', 
-          '-y',
-          '-user_agent', ytUserAgent,
-          '-i', vformat.url,
-          '-i', aformat.url,
-          '-map', '0:v:0',
-          '-map', '1:a:0',
-          '-vcodec', 'copy',
-          '-f', vformat.container
-        ]});
-        res.writeHead(200, {"Content-Type": `video/${vformat.container}`});
-        res.flushHeaders();
-        ffmpeg
-          .on("error", () => ffmpeg.destroy())
-          .pipe(res)
-          .on("error", () => ffmpeg.destroy())
-          .on("close", () => ffmpeg.destroy())
-          ;
+        respondError(res, "パラメーターが不正です");
       }
     }else{
       respondError(res, "不正アクセスです");

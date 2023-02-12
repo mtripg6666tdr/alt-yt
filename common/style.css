@@ -198,6 +198,7 @@ div.player_container div.detailed_modal {
   left: 10vw;
   width: 80vw;
   height: 90vh;
+  height: calc(90dvh - 1.5em);
   top: calc(100vh + 1.5em);
   top: calc(100dvh + 1.5em);
   background-color: #333333;
