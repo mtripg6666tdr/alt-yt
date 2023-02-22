@@ -137,16 +137,34 @@ export async function handleFetch(req:Request, res:Response){
     }
     if(sid && SID_CACHE[sid]){
       const info = await SID_CACHE[sid].info;
-      if(info.videoDetails.liveBroadcastDetails && info.videoDetails.liveBroadcastDetails.isLiveNow){
-        SID_CACHE[sid].format = ytdl.chooseFormat(info.formats, {isHLS:true} as ytdl.chooseFormatOptions);
-        res.writeHead(200, {"Content-Type": "application/json; charset=UTF-8"});
-        res.end(JSON.stringify({
-          key: SID_CACHE[sid].key,
-          format: `application/x-mpegURL`,
-          ott: SessionManager.instance.createTokenFor(key),
-          mode: "default",
-        }));
-      }else if(resolution === "high"){
+      const hasMpdDash = info.formats.some(f => f.isDashMPD && !f.isLive);
+      const allIsLive = info.formats.every(f => f.isLive)
+      if(info.videoDetails.liveBroadcastDetails){
+        if(info.videoDetails.liveBroadcastDetails.isLiveNow || allIsLive){
+          SID_CACHE[sid].format = ytdl.chooseFormat(info.formats, {isHLS:true} as ytdl.chooseFormatOptions);
+          res.writeHead(200, {"Content-Type": "application/json; charset=UTF-8"});
+          res.end(JSON.stringify({
+            key: SID_CACHE[sid].key,
+            format: `application/x-mpegURL`,
+            ott: SessionManager.instance.createTokenFor(key),
+            mode: "default",
+            request: "ignore",
+          }));
+          return;
+        }else if(info.videoDetails.liveBroadcastDetails.startTimestamp && !info.videoDetails.liveBroadcastDetails.endTimestamp){
+          res.writeHead(200, {"Content-Type": "application/json; charset=UTF-8"});
+          res.end(JSON.stringify({
+            key: null,
+            format: null,
+            ott: null,
+            mode: "upcoming",
+            startIn: new Date(info.videoDetails.liveBroadcastDetails.startTimestamp).getTime() - Date.now(),
+            request: "ignore",
+          }));
+          return;
+        }
+      }
+      if(resolution === "high" && !hasMpdDash){
         const videoFormat = ytdl.chooseFormat(info.formats, {
           filter: f => f.hasVideo && !f.hasAudio && f.container === "webm",
           quality: "highest",
@@ -161,7 +179,7 @@ export async function handleFetch(req:Request, res:Response){
         SID_CACHE[sid].vformat = videoFormat;
         SID_CACHE[sid].aformat = audioFormat;
         res.writeHead(200, {"Content-Type": "application/json; charset=UTF-8"});
-        res.end(JSON.stringify({
+        const obj = {
           key: SID_CACHE[sid].key,
           format: "application/dash+xml",
           ott: SessionManager.instance.createTokenFor(key),
@@ -177,8 +195,10 @@ export async function handleFetch(req:Request, res:Response){
           aindexrange: `${audioFormat.indexRange.start}-${audioFormat.indexRange.end}`,
           vinitrange: `${videoFormat.initRange.start}-${videoFormat.initRange.end}`,
           ainitrange: `${audioFormat.initRange.start}-${audioFormat.initRange.end}`,
-        }));
-      }else if(resolution === "audio"){
+          request: "ok",
+        };
+        res.end(JSON.stringify(obj));
+      }else if(resolution === "audio" && !hasMpdDash){
         const audioFormat = ytdl.chooseFormat(info.formats, {
           filter: "audioonly",
           quality: "highest",
@@ -191,13 +211,14 @@ export async function handleFetch(req:Request, res:Response){
           ott: SessionManager.instance.createTokenFor(key),
           mode: "default",
           length: Number(info.videoDetails.lengthSeconds) || undefined,
+          request: "ok",
         }));
       }else{
         // format seletion
         let format = null as ytdl.videoFormat;
-        if(info.formats.some(f => f.isDashMPD)){
+        if(hasMpdDash){
           format = SID_CACHE[sid].format = ytdl.chooseFormat(info.formats, {
-            filter: f => f.isDashMPD, 
+            filter: f => f.isDashMPD && !f.isLive, 
             quality: "highest"
           });
         }else{
@@ -211,6 +232,7 @@ export async function handleFetch(req:Request, res:Response){
             format: `application/dash+xml`,
             ott: SessionManager.instance.createTokenFor(key),
             mode: "default",
+            request: resolution === "normal" ? "ok" : "ignore",
           }))
         }else{
           res.writeHead(200, {"Content-Type": "application/json; charset=UTF-8"});
@@ -219,6 +241,7 @@ export async function handleFetch(req:Request, res:Response){
             format: format.mimeType,
             ott: SessionManager.instance.createTokenFor(key),
             mode: "default",
+            request: resolution === "normal" ? "ok" : "ignore",
           }));
         }
       }
@@ -258,10 +281,10 @@ export async function handlePlayback(req:Request, res:Response){
       if(req.headers.accept) headers["Accept"] = req.headers.accept;
       if(req.headers["accept-encoding"]) headers["Accept-Encoding"] = req.headers["accept-encoding"] as string;
       if(req.headers.connection) headers["Connection"] = req.headers.connection;
-      if(!type || type === "normal" || info.videoDetails.liveBroadcastDetails?.isLiveNow){
+      if(!type || type === "normal" || info.videoDetails.liveBroadcastDetails?.isLiveNow || (format && !vformat && !aformat)){
         const isLive = info.videoDetails.liveBroadcastDetails?.isLiveNow;
 
-        if(isLive || format.isDashMPD){
+        if(isLive || format.isDashMPD || format.isLive){
           const url = new URL(format.url);
           ({"http:": http, "https:": https})[url.protocol].request(url, {
             headers: {
@@ -273,7 +296,7 @@ export async function handlePlayback(req:Request, res:Response){
             const headers = Object.assign({}, remoteRes.headers);
             if(headers["set-cookie"]) delete headers["set-cookie"];
 
-            if(isLive){
+            if(isLive || format.isLive){
               if(headers["content-length"]) delete headers["content-length"];
               res.writeHead(remoteRes.statusCode, headers);
               const filter = new LineTransformStream((text) => {

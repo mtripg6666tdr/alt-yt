@@ -13,8 +13,10 @@ type VideoFetchInfo = {
   aindexrange?:string,
   ainitrange?:string,
   ott: string,
-  mode: "default"|"diy",
+  mode: "default"|"diy"|"upcoming",
+  startIn: number,
   length?:number,
+  request?:"ignore"|"ok",
 }
 
 (function(){
@@ -105,7 +107,7 @@ type VideoFetchInfo = {
         currentResolution = "normal";
       }
       window.localStorage.setItem(localStorageResolutionKey, currentResolution);
-      const initPlayer = (src:string, format:string, length:number = 0) => {
+      const initPlayer = (src:string, format:string, requestResult?:"ignore"|"ok", length:number = 0) => {
         if(!videojs) return;
         // @ts-ignore
         const videoPlayer = videojs("video_player") as videojs.VideoJsPlayer;
@@ -136,11 +138,22 @@ type VideoFetchInfo = {
           if(length > 0){
             videoPlayer.duration(length);
           }
+          if(format.startsWith("audio/")){
+            videoPlayer.userActive(true);
+            const rawPlayerContainer = document.getElementsByClassName("player")[0] as HTMLDivElement;
+            videoPlayer.options_.inactivityTimeout = 0;
+            if(rawPlayerContainer){
+              rawPlayerContainer.style.height = rawPlayerContainer.clientHeight + "px";
+              rawPlayerContainer.style.transition = "height 0.3s ease-in-out";
+              rawPlayerContainer.style.height = document.getElementsByClassName("vjs-control-bar")[0].clientHeight + "px";
+            }
+          }
         });
         // かさね要素
         const videoCover = document.createElement("div");
         videoCover.classList.add("video_cover");
         videoCover.addEventListener("click", ()=>{
+          if(format.startsWith("audio/")) return;
           if(videoPlayer.userActive()){
             if(videoPlayer.paused()) 
               videoPlayer.play();
@@ -215,6 +228,13 @@ type VideoFetchInfo = {
           const queryString = Object.keys(newQuery).map(key => `${key}=${encodeURIComponent(newQuery[key])}`).join("&");
           window.location.search = "?" + queryString;
         });
+        let resDes = "対応している動画に対して設定が適用されます。";
+        if(requestResult === "ignore"){
+          resDes += "なお、この動画は非対応です。";
+        }
+        const resDesp = document.createElement("p");
+        resDesp.textContent = resDes;
+        controlsContainer.appendChild(resDesp);
       };
       let detailedOpened = false;
       if(detailedButton){
@@ -242,7 +262,23 @@ type VideoFetchInfo = {
         .then((json:VideoFetchInfo) => {
           if(json.mode === "default"){
             const playbackUrl = `/video?sid=${searchParams.sid}&key=${json.key}&sval=${searchParams.sval}&ott=${json.ott}&type=${currentResolution}`;
-            initPlayer(playbackUrl, json.format, json.length);
+            initPlayer(playbackUrl, json.format, json.request, json.length);
+          }else if(json.mode === "upcoming"){
+            const container = document.getElementById("video_player")!;
+            const p = document.createElement("div");
+            const target = new Date(Date.now() + json.startIn);
+            p.textContent = `${target.getFullYear()}/${target.getMonth() + 1}/${target.getDate()} ${target.getHours()}:${target.getMinutes()}:${target.getSeconds()} 公開予定`;
+            p.style.lineHeight = container.clientHeight + "px";
+            p.style.fontSize = "1rem";
+            container.appendChild(p);
+            const button = (document.getElementsByClassName("vjs-big-play-button")[0] as HTMLDivElement|undefined);
+            if(button){
+              button.style.opacity = "0.4";
+              button.style.pointerEvents = "none";
+            }
+            const timeout = Math.max(json.startIn, 10000);
+            setTimeout(() => location.reload(), timeout);
+            console.log(timeout / 1000 + "秒後にリロードされます。");
           }else{
             const playbackUrlBase = `${window.location.origin}/video?sid=${searchParams.sid}&amp;key=${json.key}&amp;sval=${searchParams.sval}&amp;ott=${json.ott}&amp;type=`;
             const mpdManifest = mpdTemplate
@@ -262,7 +298,7 @@ type VideoFetchInfo = {
               .replace(/\$AINITRANGE/, json.ainitrange!)
               .trim()
             ;
-            initPlayer(URL.createObjectURL(new Blob([mpdManifest], {type: json.format})), json.format, json.length);
+            initPlayer(URL.createObjectURL(new Blob([mpdManifest], {type: json.format})), json.format, json.request, json.length);
           }
         })
         .catch(e => {

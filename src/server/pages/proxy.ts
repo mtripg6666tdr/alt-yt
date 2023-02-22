@@ -30,16 +30,14 @@ export function handleProxy(req:Request, res:Response){
     }
     if(allowedDomains.some(regex => new RegExp(regex).test(durl.host))){
       const httpLib = {"http:": http, "https:": https};
-      const headers = {
+      const headers:{[key:string]:string|string[]} = {
         "User-Agent": userAgent,
         "Accept": req.headers.accept || "*/*",
         "Accept-Encoding": req.headers["accept-encoding"],
         "Accept-Language": req.headers["accept-language"],
       };
-      httpLib[durl.protocol as keyof typeof httpLib].request({
-        protocol: durl.protocol,
-        host: durl.host,
-        path: durl.pathname + durl.search + durl.hash,
+      if(req.headers.range) headers["Range"] = req.headers.range;
+      httpLib[durl.protocol as keyof typeof httpLib].request(url, {
         method: "GET",
         headers,
         agent: req.headers.connection === "keep-alive" ? new httpLib[durl.protocol as keyof typeof httpLib].Agent({keepAlive:true}) : undefined

@@ -20,7 +20,7 @@ module.exports = {
               compact: true,
               controlFlowFlattening: false,
               controlFlowFlatteningThreshold: 0.75,
-              disableConsoleOutput: true,
+              disableConsoleOutput: false,
               identifierNamesCache: null,
               identifierNamesGenerator: 'mangled',
               optionsPreset: 'medium-obfuscation',
