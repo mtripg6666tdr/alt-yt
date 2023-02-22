@@ -141,7 +141,7 @@ export async function handleFetch(req:Request, res:Response){
       const allIsLive = info.formats.length > 0 && info.formats.every(f => f.isLive);
       if(info.videoDetails.liveBroadcastDetails){
         if(info.videoDetails.liveBroadcastDetails.isLiveNow || allIsLive){
-          SID_CACHE[sid].format = ytdl.chooseFormat(info.formats, {isHLS:true} as ytdl.chooseFormatOptions);
+          SID_CACHE[sid].format = (resolution === "normal" && info.formats.find(f => f.qualityLabel === "480p")) || ytdl.chooseFormat(info.formats, {isHLS:true} as ytdl.chooseFormatOptions);
           res.writeHead(200, {"Content-Type": "application/json; charset=UTF-8"});
           res.end(JSON.stringify({
             key: SID_CACHE[sid].key,
