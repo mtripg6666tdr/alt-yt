@@ -279,6 +279,10 @@ type VideoFetchInfo = {
             const timeout = Math.max(json.startIn, 10000);
             setTimeout(() => location.reload(), timeout);
             console.log(timeout / 1000 + "秒後にリロードされます。");
+            const videoCover = document.createElement("div");
+            videoCover.style.top = "0";
+            videoCover.classList.add("video_cover");
+            document.getElementById("video_player")!.appendChild(videoCover);
           }else{
             const playbackUrlBase = `${window.location.origin}/video?sid=${searchParams.sid}&amp;key=${json.key}&amp;sval=${searchParams.sval}&amp;ott=${json.ott}&amp;type=`;
             const mpdManifest = mpdTemplate

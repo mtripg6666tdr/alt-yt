@@ -138,7 +138,7 @@ export async function handleFetch(req:Request, res:Response){
     if(sid && SID_CACHE[sid]){
       const info = await SID_CACHE[sid].info;
       const hasMpdDash = info.formats.some(f => f.isDashMPD && !f.isLive);
-      const allIsLive = info.formats.every(f => f.isLive)
+      const allIsLive = info.formats.length > 0 && info.formats.every(f => f.isLive);
       if(info.videoDetails.liveBroadcastDetails){
         if(info.videoDetails.liveBroadcastDetails.isLiveNow || allIsLive){
           SID_CACHE[sid].format = ytdl.chooseFormat(info.formats, {isHLS:true} as ytdl.chooseFormatOptions);
