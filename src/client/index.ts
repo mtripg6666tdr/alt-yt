@@ -108,6 +108,38 @@ type VideoFetchInfo = {
       }
       window.localStorage.setItem(localStorageResolutionKey, currentResolution);
       const initPlayer = (src:string, format:string, requestResult?:"ignore"|"ok", length:number = 0) => {
+        // 画質切り替え
+        const resolutionSelect = document.createElement("select");
+        const highOption = document.createElement("option");
+        highOption.value = "high";
+        highOption.textContent = "高画質";
+        if("MediaSource" in window && (!window.MediaSource.isTypeSupported("video/webm; codecs=vp9") || !window.MediaSource.isTypeSupported("video/webm; codecs=opus"))){
+          highOption.disabled = true;
+        }
+        const normalOption = document.createElement("option");
+        normalOption.value = "normal";
+        normalOption.textContent = "通常";
+        const audioOption = document.createElement("option");
+        audioOption.value = "audio";
+        audioOption.textContent = "オーディオのみ";
+        resolutionSelect.append(highOption, normalOption, audioOption);
+        resolutionSelect.value = currentResolution;
+        controlsContainer.appendChild(resolutionSelect);
+        resolutionSelect.addEventListener("change", () => {
+          console.log(resolutionSelect.value);
+          const newQuery = Object.assign(Object.create(null), searchParams);
+          newQuery.resolution = resolutionSelect.value;
+          const queryString = Object.keys(newQuery).map(key => `${key}=${encodeURIComponent(newQuery[key])}`).join("&");
+          window.location.search = "?" + queryString;
+        });
+        let resDes = "対応している動画に対して設定が適用されます。";
+        if(requestResult === "ignore"){
+          resDes += "なお、この動画は非対応です。";
+        }
+        const resDesp = document.createElement("p");
+        resDesp.textContent = resDes;
+        controlsContainer.appendChild(resDesp);
+        // 動画準備
         if(!videojs) return;
         // @ts-ignore
         const videoPlayer = videojs("video_player") as videojs.VideoJsPlayer;
@@ -204,37 +236,6 @@ type VideoFetchInfo = {
             bufShow = true;
           }
         });
-        // 画質切り替え
-        const resolutionSelect = document.createElement("select");
-        const highOption = document.createElement("option");
-        highOption.value = "high";
-        highOption.textContent = "高画質";
-        if("MediaSource" in window && (!window.MediaSource.isTypeSupported("video/webm; codecs=vp9") || !window.MediaSource.isTypeSupported("video/webm; codecs=opus"))){
-          highOption.disabled = true;
-        }
-        const normalOption = document.createElement("option");
-        normalOption.value = "normal";
-        normalOption.textContent = "通常";
-        const audioOption = document.createElement("option");
-        audioOption.value = "audio";
-        audioOption.textContent = "オーディオのみ";
-        resolutionSelect.append(highOption, normalOption, audioOption);
-        resolutionSelect.value = currentResolution;
-        controlsContainer.appendChild(resolutionSelect);
-        resolutionSelect.addEventListener("change", () => {
-          console.log(resolutionSelect.value);
-          const newQuery = Object.assign(Object.create(null), searchParams);
-          newQuery.resolution = resolutionSelect.value;
-          const queryString = Object.keys(newQuery).map(key => `${key}=${encodeURIComponent(newQuery[key])}`).join("&");
-          window.location.search = "?" + queryString;
-        });
-        let resDes = "対応している動画に対して設定が適用されます。";
-        if(requestResult === "ignore"){
-          resDes += "なお、この動画は非対応です。";
-        }
-        const resDesp = document.createElement("p");
-        resDesp.textContent = resDes;
-        controlsContainer.appendChild(resDesp);
       };
       let detailedOpened = false;
       if(detailedButton){
