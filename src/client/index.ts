@@ -278,7 +278,9 @@ type VideoFetchInfo = {
               button.style.pointerEvents = "none";
             }
             const timeout = Math.max(json.startIn, 10000);
-            setTimeout(() => location.reload(), timeout);
+            setTimeout(() => {
+              location.href = `/watch?v=${json.key}&sval=${searchParams.sval}`;
+            }, timeout);
             console.log(timeout / 1000 + "秒後にリロードされます。");
             const videoCover = document.createElement("div");
             videoCover.style.top = "0";

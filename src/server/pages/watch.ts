@@ -152,7 +152,7 @@ export async function handleFetch(req:Request, res:Response){
         }else if(info.videoDetails.liveBroadcastDetails.startTimestamp && !info.videoDetails.liveBroadcastDetails.endTimestamp){
           res.writeHead(200, {"Content-Type": "application/json; charset=UTF-8"});
           res.end(JSON.stringify({
-            key: null,
+            key: info.videoDetails.videoId,
             format: null,
             ott: null,
             mode: "upcoming",
