@@ -1,10 +1,10 @@
 import { EventEmitter, PassThrough, Readable } from "stream";
 import { http, https } from "follow-redirects";
-import { Response } from "express";
+import { Request, Response } from "express";
 
 const httpLibs = {"http:": http, "https:": https} as {[proto:string]:typeof http|typeof https};
 
-export function downloadParallel(url:string, additionalHeaders:{[key:string]:string}, chunkLength:number, res:Response){
+export function downloadParallel(url:string, additionalHeaders:{[key:string]:string}, chunkLength:number, req:Request, res:Response){
   let goalRange = {from: -1, to: -1};
   const respondInvalidRange = () => {
     res.writeHead(416);
@@ -29,7 +29,8 @@ export function downloadParallel(url:string, additionalHeaders:{[key:string]:str
     respondInvalidRange();
     return;
   }
-  new ParallelStreamManager(res, url, 3, goalRange.from, goalRange.to, additionalHeaders, chunkLength);
+  const manager = new ParallelStreamManager(res, url, 3, goalRange.from, goalRange.to, additionalHeaders, chunkLength);
+  ["close", "end"].forEach(ev => req.once(ev, () => manager.destroy()));
 }
 
 class ParallelStreamManager extends EventEmitter {
@@ -47,7 +48,7 @@ class ParallelStreamManager extends EventEmitter {
     super();
     this.urlObj = new URL(url);
     console.log("manager initialized from", rangeBegin, "to", rangeEnd);
-    ["error", "close"].forEach(ev => res.on(ev, () => this.destroy()));
+    ["error", "close"].forEach(ev => res.once(ev, () => this.destroy()));
     this.contentBuffer[++this.current] = new ParallelPartialStream(this, "stream", this.urlObj, this.rangeBegin, this.chunkLength, this.current, this.additionalHeaders, rangeEnd)
       .on("finish", (stream:Readable) => {
         if(this.destroyed) return;
@@ -114,6 +115,10 @@ class ParallelStreamManager extends EventEmitter {
     })
     console.log("manager was destroyed");
     this._destroyed = true;
+    if(typeof global.gc === "function"){
+      global.gc();
+      console.log("GC called");
+    }
   }
 }
 

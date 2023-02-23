@@ -4,13 +4,11 @@ import { Readable, Writable, pipeline } from "stream";
 import * as zlib from "zlib";
 import { http, https } from "follow-redirects";
 import { Request, Response } from "express";
-import { FFmpeg } from "prism-media";
 import LineTransformStream from "line-transform-stream";
 import * as ytdl from "ytdl-core";
 import { base64url, CalcHourMinSec, generateHash, generateRandomNumber, insertAnchers, parseCookie, respondError, searchCardTemplate, ytUserAgent } from "../util";
 import { SessionManager } from "../session";
 import { downloadParallel } from "../components/parallel-dl";
-import { enc } from "crypto-js";
 
 const tempalte = fs.readFileSync(path.join(__dirname, "../../common/watch.html"), {encoding:"utf-8"});
 
@@ -366,7 +364,7 @@ export async function handlePlayback(req:Request, res:Response){
             res.end();
           }).end();
         }else{
-          downloadParallel(format.url, headers, 512 * 1024, res);
+          downloadParallel(format.url, headers, 512 * 1024, req, res);
         }
       }else if(type === "video" && vformat){
         const url = new URL(vformat.url);
