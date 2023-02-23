@@ -11,6 +11,8 @@ import { handleChannel } from "./pages/channel";
 
 const topPageTemplate = fs.readFileSync(path.join(__dirname, "../common/index.html"), {encoding:"utf-8"});
 const authPageTemplate = fs.readFileSync(path.join(__dirname, "../common/auth.html"), {encoding: "utf-8"});
+const style = fs.readFileSync(path.join(__dirname, "../common/style.css"), {encoding: "utf-8"});
+const script = fs.readFileSync(path.join(__dirname, "../common/common.js"), {encoding: "utf-8"});
 
 export function createServer(){
   const app = express();
@@ -18,7 +20,6 @@ export function createServer(){
     .use(express.urlencoded({extended:true}))
     .get("/style.css", (req, res) => {
       try{
-        const style = fs.readFileSync(path.join(__dirname, "../common/style.css"), {encoding: "utf-8"});
         res.writeHead(200, {
           "Content-Type": "text/css; charset=UTF-8",
           "Cache-Control": "max-age=86400, private"
@@ -31,7 +32,6 @@ export function createServer(){
     })
     .get("/common.js", (req, res) => {
       try{
-        const script = fs.readFileSync(path.join(__dirname, "../common/common.js"), {encoding: "utf-8"});
         res.writeHead(200, {
           "Content-Type": "text/javascript; charset=UTF-8",
           "Cache-Control": "max-age=86400, private"
@@ -39,6 +39,17 @@ export function createServer(){
         res.end(script);
       }
       catch(e){
+        respondError(res, e.toString(), 500);
+      }
+    })
+    .get("/robots.txt", (req, res) => {
+      try{
+        res.writeHead(200, {
+          "Content-Type": "text/plain",
+          "Cache-Control": "max-age=86400",
+        });
+        res.end("User-agent: *\r\nDisallow: /");
+      }catch(e){
         respondError(res, e.toString(), 500);
       }
     })
@@ -94,8 +105,8 @@ export function createServer(){
           res.end(authPageTemplate.replace(/{revokeResult}/, ur ? "✅セッションを終了しました" : ""));
         }
       }else{
-        res.writeHead(404, {"Location": "/"});
-        res.end();
+        res.writeHead(403);
+        res.end("Forbidden");
       }
     })
   return app;
